@@ -34,7 +34,6 @@ use crate::features::check_role;
 pub async fn create_album(
     pool: web::Data<DbPool>,
     http_request: HttpRequest,
-    req: web::Form<CreateAlbumRequest>,
     payload: Multipart,
 ) -> impl Responder {
     if check_role(http_request) == Admin {

@@ -119,10 +119,14 @@ where
     }
     // Convert File Data HashMap to JSON value and then insert to FormData struct
     for (key, mut paths) in file_data_map {
-        if paths.len() == 1 {
-            form_data_map.insert(key, Value::String(paths.pop().unwrap()));
-        } else if paths.len() > 1 {
+        if is_multi_keywords(key.as_str()) {
             form_data_map.insert(key, Value::Array(paths.into_iter().map(Value::String).collect()));
+        } else {
+            if paths.len() == 1 {
+                form_data_map.insert(key, Value::String(paths.pop().unwrap()));
+            } else if paths.len() > 1 {
+                form_data_map.insert(key, Value::Array(paths.into_iter().map(Value::String).collect()));
+            }
         }
     }
     // Convert HashMap to JSON value and then to FormData struct
@@ -211,4 +215,8 @@ fn get_image_metadata(file_path: &str) -> Option<ImageMetadata> {
     // Get the dimensions
     let (width, height) = img.dimensions();
     Option::from(ImageMetadata { width, height })
+}
+
+fn is_multi_keywords(word: &str) -> bool {
+    word.ends_with("s") || word.ends_with("es")
 }

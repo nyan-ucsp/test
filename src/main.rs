@@ -14,7 +14,7 @@ mod features;
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     dotenv().ok();
-    
+
     // ! Database
     let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
     let connection = common::database::sqlite_connection::connect(database_url);
@@ -25,6 +25,7 @@ async fn main() -> std::io::Result<()> {
     // ! API Keys
     let admin_key = env::var("ADMIN_API_KEY").expect("Admin API Key must be set");
     let user_key = env::var("USER_API_KEY").expect("Admin API Key must be set");
+    let public_routes = vec![String::from("/health")];
     // Log that the API is starting
     println!("📔API Documentation can bet found at ➡️ http://localhost:8010/swagger/index.html");
     HttpServer::new(move || {
@@ -36,7 +37,7 @@ async fn main() -> std::io::Result<()> {
             .supports_credentials();
 
         App::new()
-            .wrap(common::middleware::api_key_middleware::ApiKeyMiddleware::new(admin_key.clone(), user_key.clone()))
+            .wrap(common::middleware::api_key_middleware::ApiKeyMiddleware::new(admin_key.clone(), user_key.clone(), public_routes.clone()))
             .wrap(Logger::default())
             .wrap(cors)
             .app_data(web::Data::new(connection.clone()))

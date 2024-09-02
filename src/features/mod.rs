@@ -9,10 +9,11 @@ use crate::common::models::response_data::ResponseData;
 use crate::common::models::response_message::ResponseMessage;
 
 pub mod album;
+pub mod health_check;
 
 pub fn config_routes(cfg: &mut web::ServiceConfig) {
     album::configure(cfg);
-    album::configure(cfg);
+    health_check::configure(cfg);
 }
 
 #[derive(OpenApi)]
@@ -23,6 +24,7 @@ pub fn config_routes(cfg: &mut web::ServiceConfig) {
         album::controllers::get_albums,
         album::controllers::update_album,
         album::controllers::delete_album,
+        health_check::controllers::get_health,
     ),
     components(
         schemas(
@@ -37,6 +39,7 @@ pub fn config_routes(cfg: &mut web::ServiceConfig) {
     modifiers(& SecurityAddon),
     tags(
         (name = "Album", description = "Album"),
+        (name = "HealthCheck", description = "Service Health Checking"),
     ),
 )]
 pub struct ApiDoc;

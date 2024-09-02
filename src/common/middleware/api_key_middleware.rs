@@ -10,11 +10,12 @@ use crate::common::models::response_message::ResponseMessage;
 pub struct ApiKeyMiddleware {
     admin_key: String,
     user_key: String,
+    public_routes: Vec<String>,
 }
 
 impl ApiKeyMiddleware {
-    pub fn new(admin_key: String, user_key: String) -> Self {
-        Self { admin_key, user_key }
+    pub fn new(admin_key: String, user_key: String, public_routes: Vec<String>) -> Self {
+        Self { admin_key, user_key, public_routes }
     }
 }
 
@@ -34,6 +35,7 @@ where
             service: Rc::new(service),
             admin_key: self.admin_key.clone(),
             user_key: self.user_key.clone(),
+            public_routes: self.public_routes.clone(),
         })
     }
 }
@@ -42,6 +44,7 @@ pub struct ApiKeyMiddlewareService<S> {
     service: Rc<S>,
     admin_key: String,
     user_key: String,
+    public_routes: Vec<String>,
 }
 
 impl<S, B> Service<ServiceRequest> for ApiKeyMiddlewareService<S>
@@ -64,7 +67,17 @@ where
         let admin_key = self.admin_key.clone();
         let user_key = self.user_key.clone();
 
-        // Skip middleware for /swagger route or /data route
+        // Skip middleware for /swagger route or /data route or /file route
+        for public_route in self.public_routes.clone() {
+            if req.path().starts_with(public_route.as_str()) {
+                let fut = self.service.call(req);
+                return Box::pin(async move {
+                    let res = fut.await?;
+                    Ok(res)
+                });
+            }
+        }
+
         if req.path().starts_with("/swagger") || req.path().starts_with("/api-docs") || req.path().starts_with("/static") {
             let fut = self.service.call(req);
             return Box::pin(async move {
