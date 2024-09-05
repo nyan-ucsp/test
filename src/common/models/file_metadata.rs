@@ -30,13 +30,3 @@ pub struct VideoMetadata {
     pub width: u32,
     pub height: u32,
 }
-
-impl VideoMetadata {
-    pub fn default() -> Self {
-        VideoMetadata {
-            thumbnail: String::from(""),
-            width: 0,
-            height: 0,
-        }
-    }
-}

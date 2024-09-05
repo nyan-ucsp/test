@@ -7,6 +7,7 @@ diesel::table! {
         title -> Text,
         description -> Text,
         completed -> Bool,
+        covers -> Text,
         tags -> Nullable<Text>,
         enable -> Bool,
         min_age -> Integer,

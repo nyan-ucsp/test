@@ -1,14 +1,14 @@
 use chrono::Utc;
 use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
-use utoipa::ToSchema;
+use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
 
 use crate::common::models::file_metadata::ImageMetadata;
 use crate::common::utils::{get_data_directory, get_file_metadata};
 use crate::schema::albums;
 
-#[derive(Debug, Queryable, Selectable, Serialize, Deserialize, ToSchema, AsChangeset, Clone)]
+#[derive(Debug, Queryable, Selectable, Serialize, Deserialize, ToSchema, AsChangeset, Clone, IntoParams,  PartialEq, Eq)]
 #[diesel(table_name = albums)]
 pub struct Album {
     pub id: i32,
@@ -16,6 +16,7 @@ pub struct Album {
     pub title: String,
     pub description: String,
     pub completed: bool,
+    pub covers: String,
     pub tags: Option<String>,
     pub enable: bool,
     pub min_age: i32,
@@ -125,6 +126,7 @@ pub struct NewAlbum {
     pub title: String,
     pub description: String,
     pub completed: bool,
+    pub covers: String,
     pub tags: Option<String>,
     pub enable: bool,
     pub min_age: i32,
@@ -150,6 +152,7 @@ impl NewAlbum {
             title: req.title,
             description: req.description,
             completed: req.completed.unwrap_or(false),
+            covers: String::from(""),
             tags: req.tags,
             enable: req.enable.unwrap_or(true),
             min_age: req.min_age.unwrap_or(0),

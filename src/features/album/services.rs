@@ -47,6 +47,7 @@ impl Service {
             title: update_album.title,
             description: update_album.description,
             completed: update_album.completed.unwrap_or(album.completed),
+            covers: album.covers,
             tags: update_album.tags,
             enable: update_album.enable.unwrap_or(album.enable),
             min_age: update_album.min_age.unwrap_or(album.min_age),

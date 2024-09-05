@@ -5,8 +5,8 @@ use utoipa::openapi::security::{ApiKey, ApiKeyValue, SecurityScheme};
 
 use crate::common::enums::Role;
 use crate::common::enums::Role::*;
-use crate::common::models::response_data::ResponseData;
 use crate::common::models::response_message::ResponseMessage;
+use crate::common::models::response_data::*;
 
 pub mod album;
 pub mod health_check;
@@ -33,7 +33,7 @@ pub fn config_routes(cfg: &mut web::ServiceConfig) {
             album::models::UpdateAlbumRequest,
             album::models::GetAlbumRequest,
             ResponseMessage,
-            ResponseData < album::models::Album >
+            ResponseDataAlbum
         )
     ),
     modifiers(& SecurityAddon),

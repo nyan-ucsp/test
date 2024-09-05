@@ -70,7 +70,7 @@ pub async fn create_album(
     path = "/albums",
     request_body = GetAlbumRequest,
     responses(
-    (status = 200, description = "Request successfully", body = ResponseData < Album >),
+    (status = 200, description = "Request successfully", body = ResponseDataAlbum),
     (status = 401, description = "Unauthorized error", body = ResponseMessage),
     (status = 500, description = "Internal server error", body = ResponseMessage)
     ),
