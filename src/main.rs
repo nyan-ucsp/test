@@ -27,7 +27,7 @@ async fn main() -> std::io::Result<()> {
     let user_key = env::var("USER_API_KEY").expect("Admin API Key must be set");
     let public_routes = vec![String::from("/health")];
     // Log that the API is starting
-    println!("📔API Documentation can bet found at ➡️ http://localhost:8010/swagger/index.html");
+    println!("📔API Documentation can be found at ➡️ http://localhost:8010/swagger/index.html");
     HttpServer::new(move || {
         // ! Configure CORS
         let cors = Cors::default()

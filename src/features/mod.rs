@@ -24,6 +24,7 @@ pub fn config_routes(cfg: &mut web::ServiceConfig) {
         album::controllers::get_albums,
         album::controllers::update_album,
         album::controllers::delete_album,
+        album::controllers::add_album_cover,
         health_check::controllers::get_health,
     ),
     components(
@@ -32,6 +33,7 @@ pub fn config_routes(cfg: &mut web::ServiceConfig) {
             album::models::CreateAlbumRequest,
             album::models::UpdateAlbumRequest,
             album::models::GetAlbumRequest,
+            album::models::AddAlbumCoverRequest,
             ResponseMessage,
             ResponseDataAlbum
         )

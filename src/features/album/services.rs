@@ -1,3 +1,4 @@
+use std::error::Error;
 use chrono::Utc;
 use uuid::Uuid;
 
@@ -14,16 +15,29 @@ impl Service {
     pub async fn create_album(
         pool: &DbPool,
         req_data: models::CreateAlbumRequest,
-    ) -> Result<models::Album, diesel::result::Error> {
-        let src_file_path = req_data.image.clone();
+    ) -> Result<models::AlbumResponse, &str> {
+        let image_src_file_path = req_data.image.clone();
+        let cover_src_files_paths : Vec<String> = req_data.clone().covers.unwrap_or(vec![]);
         let new_album = models::NewAlbum::from_request(req_data);
-        let des_file_path = format!("{}/{}", get_project_directory(), new_album.url.clone());
+        let image_des_file_path = format!("{}/{}", get_project_directory(), new_album.url.clone());
         match Repository::create_album(pool, new_album).await {
             Ok(album) => {
-                move_file_and_replace(&*src_file_path, &*des_file_path);
-                Ok(album)
+                let response = models::AlbumResponse::from_album(album);
+                if response.covers.len()==cover_src_files_paths.len() {
+                    move_file_and_replace(&*image_src_file_path, &*image_des_file_path);
+                    for i in 0..cover_src_files_paths.len() {
+                        move_file_and_replace(cover_src_files_paths[i].as_str(),format!("{}/{}", get_project_directory(), response.covers[i].clone()).as_str())
+                    }
+                    Ok(response)
+                }else{
+                    Err("Some files lost on data exchanging")
+                }
+                
             }
-            Err(e) => Err(e),
+            Err(e) => {
+                eprintln!("Error: {e}");
+                Err("Failed to create album")
+            },
         }
     }
 
@@ -39,7 +53,7 @@ impl Service {
         album_uuid: String,
         update_album: models::UpdateAlbumRequest,
     ) -> Result<models::Album, diesel::result::Error> {
-        let album = Repository::get_album_by_uuid(pool, album_uuid).await.unwrap();
+        let album = Repository::get_album_by_uuid(pool, album_uuid).await.expect("Album not found");
         let old_url = album.url.clone();
         let mut new_album = models::Album {
             id: album.id,
@@ -52,7 +66,7 @@ impl Service {
             enable: update_album.enable.unwrap_or(album.enable),
             min_age: update_album.min_age.unwrap_or(album.min_age),
             url: album.url,
-            content_type: "".to_string(),
+            content_type: album.content_type,
             width: album.width,
             height: album.height,
             bytes: album.bytes,

@@ -1,14 +1,30 @@
+use std::collections::HashMap;
 use chrono::Utc;
 use diesel::prelude::*;
+use futures_util::StreamExt;
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
 
 use crate::common::models::file_metadata::ImageMetadata;
-use crate::common::utils::{get_data_directory, get_file_metadata};
+use crate::common::models::response_message::ResponseMessage;
+use crate::common::utils::{create_directory_if_not_exists, delete_directory_if_exists, get_data_directory, get_file_metadata, get_project_directory, parse_option_date_time, parse_option_vec_string, parse_payload_data, save_file_to_directory};
 use crate::schema::albums;
 
-#[derive(Debug, Queryable, Selectable, Serialize, Deserialize, ToSchema, AsChangeset, Clone, IntoParams,  PartialEq, Eq)]
+#[derive(
+    Debug,
+    Queryable,
+    Selectable,
+    Serialize,
+    Deserialize,
+    ToSchema,
+    AsChangeset,
+    Clone,
+    IntoParams,
+    PartialEq,
+    Eq
+)]
 #[diesel(table_name = albums)]
 pub struct Album {
     pub id: i32,
@@ -30,6 +46,66 @@ pub struct Album {
     pub created_at: Option<String>,
     pub updated_at: Option<String>,
 }
+
+#[derive(
+    Debug,
+    Serialize,
+    Deserialize,
+    Clone,
+    IntoParams,
+    PartialEq,
+    Eq
+)]
+pub struct AlbumResponse {
+    pub id: i32,
+    pub uuid: String,
+    pub title: String,
+    pub description: String,
+    pub completed: bool,
+    pub covers: Vec<String>,
+    pub tags: Option<String>,
+    pub enable: bool,
+    pub min_age: i32,
+    pub url: String,
+    pub content_type: String,
+    pub width: i32,
+    pub height: i32,
+    pub bytes: i32,
+    pub released_at: Option<String>,
+    pub broken_at: Option<String>,
+    pub created_at: Option<String>,
+    pub updated_at: Option<String>,
+}
+
+impl AlbumResponse {
+    pub fn from_album(album: Album) -> Self {
+        AlbumResponse {
+            id: album.id,
+            uuid: album.uuid,
+            title: album.title,
+            description: album.description,
+            completed: album.completed,
+            covers: album.covers
+                .split(",")
+                .filter(|s| !s.is_empty())
+                .map(String::from)
+                .collect::<Vec<String>>(),
+            tags: album.tags,
+            enable: album.enable,
+            min_age: album.min_age,
+            url: album.url,
+            content_type: album.content_type,
+            width: album.width,
+            height: album.height,
+            bytes: album.bytes,
+            released_at: album.released_at,
+            broken_at: album.broken_at,
+            created_at: album.created_at,
+            updated_at: album.updated_at,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct CreateAlbumRequest {
     #[schema(example = "Title")]
@@ -39,6 +115,9 @@ pub struct CreateAlbumRequest {
     /// Album Cover **Accept Only JPG**
     #[schema(value_type = String, format = Binary)]
     pub image: String,
+    /// Album Description Images **Accept Only JPG**
+    #[schema(value_type = Option<Vec<String>>, format = Binary)]
+    pub covers: Option<Vec<String>>,
     /// Completed or End album default is false
     #[schema(example = false)]
     pub completed: Option<bool>,
@@ -56,13 +135,35 @@ pub struct CreateAlbumRequest {
     pub released_at: Option<String>,
 }
 
+impl CreateAlbumRequest {
+    pub async fn from_payload_data(payload_data: HashMap<String, Value>) -> Self {
+        let image_paths: Vec<String> = payload_data["image"].as_array().unwrap().iter().map(|value| value.as_str().unwrap().to_string()).collect();
+        let mut  cover_paths : Vec<String> = vec![];
+        if !payload_data["covers"].is_null() {
+            cover_paths =payload_data["covers"].as_array().unwrap().into_iter().map(|s| s.as_str().unwrap().to_string()).collect();
+        }
+
+        CreateAlbumRequest {
+            title: payload_data["title"].as_str().unwrap().to_string(),
+            description: payload_data["description"].as_str().unwrap().to_string(),
+            image: image_paths.first().unwrap().to_string(),
+            covers: Option::from(cover_paths),
+            completed: payload_data["completed"].as_bool(),
+            tags: payload_data["tags"].as_str().map(|value| value.to_string()),
+            enable: payload_data["enable"].as_bool(),
+            min_age: payload_data["min_age"].as_i64().map(|value| value.try_into().unwrap()),
+            released_at: parse_option_date_time(payload_data["released_at"].as_str()),
+        }
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct UpdateAlbumRequest {
     #[schema(example = "Title")]
     pub title: String,
     #[schema(example = "Description")]
     pub description: String,
-    /// Album Cover **Accept Only JPG**
+    /// Album Default Cover **Accept Only JPG**
     #[schema(value_type = Option < String >, format = Binary)]
     pub image: Option<String>,
     /// Completed or End album default is false
@@ -83,7 +184,13 @@ pub struct UpdateAlbumRequest {
     /// Set empty if your album fix
     #[schema(example = "")]
     pub broken_at: Option<String>,
+}
 
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
+pub struct AddAlbumCoverRequest {
+    /// Album Covers **Accept Only JPG**
+    #[schema(value_type = Vec < String >, format = Binary)]
+    pub covers: Vec<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
@@ -146,13 +253,14 @@ impl NewAlbum {
         let file_metadata = get_file_metadata(&req.image);
         let format = file_metadata.original_name.split(".").last().unwrap();
         let url = format!("{}/{}/{}.{}", get_data_directory(), album_uuid, image_uuid, format);
+        let covers: Vec<String> = req.covers.unwrap_or(vec![]).into_iter().map(|s| format!("{}/{}/{}.{}", get_data_directory(), album_uuid, Uuid::new_v4().to_string(), s.split(".").last().unwrap())).collect();
 
         NewAlbum {
             uuid: album_uuid,
             title: req.title,
             description: req.description,
             completed: req.completed.unwrap_or(false),
-            covers: String::from(""),
+            covers: covers.join(","),
             tags: req.tags,
             enable: req.enable.unwrap_or(true),
             min_age: req.min_age.unwrap_or(0),

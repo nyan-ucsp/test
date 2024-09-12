@@ -7,7 +7,6 @@ use actix_multipart::{Field, Multipart};
 use futures_util::StreamExt;
 use image::GenericImageView;
 use mime_guess::from_path;
-use serde::de::DeserializeOwned;
 use serde_json::Value;
 use uuid::Uuid;
 
@@ -83,15 +82,13 @@ pub fn get_project_directory() -> String {
     format!("{}", env::current_dir().expect("REASON").display(), )
 }
 
-pub async fn parse_payload_data<T>(mut payload: Multipart) -> Result<(T, String), actix_web::HttpResponse>
-where
-    T: DeserializeOwned,
-{
-    let err = Err(actix_web::HttpResponse::BadRequest().json(ResponseMessage { message: String::from("Failed to parsed payload") }));
-    let mut form_data_map: HashMap<String, Value> = HashMap::new();
+pub async fn parse_payload_data(mut payload: Multipart) -> Result<(HashMap<String, Value>, String), String> {
     let tmp_uuid = Uuid::new_v4().to_string();
     let tmp_path = format!("{}/tmp/{}", get_project_directory(), tmp_uuid);
+    // !dynamic mapping
+    let mut form_data_map: HashMap<String, Value> = HashMap::new();
     let mut file_data_map: HashMap<String, Vec<String>> = HashMap::new();
+
     create_directory_if_not_exists(&tmp_path.clone());
     while let Some(item) = payload.next().await {
         let mut field = item.unwrap();
@@ -112,66 +109,40 @@ where
                 // Store the file path in the form data map
                 file_data_map.add_file_path(name, filepath);
             } else {
-                let json_value = parse_json_value(&mut field).await;
+                let mut value = Vec::new();
+                while let Some(chunk) = field.next().await {
+                    let chunk = chunk.unwrap();
+                    value.extend_from_slice(&chunk);
+                }
+                let json_value = Value::String(String::from_utf8(value).unwrap());
                 form_data_map.insert(name.to_string(), json_value);
             }
         }
     }
     // Convert File Data HashMap to JSON value and then insert to FormData struct
     for (key, mut paths) in file_data_map {
-        if is_multi_keywords(key.as_str()) {
-            form_data_map.insert(key, Value::Array(paths.into_iter().map(Value::String).collect()));
-        } else {
-            if paths.len() == 1 {
-                form_data_map.insert(key, Value::String(paths.pop().unwrap()));
-            } else if paths.len() > 1 {
-                form_data_map.insert(key, Value::Array(paths.into_iter().map(Value::String).collect()));
-            }
-        }
+        form_data_map.insert(key, Value::Array(paths.into_iter().map(Value::String).collect()));
     }
-    // Convert HashMap to JSON value and then to FormData struct
-    let form_data_json = match serde_json::to_value(form_data_map) {
-        Ok(form_data_json) => form_data_json,
-        Err(_) => {
-            delete_directory_if_exists(&tmp_path);
-            return err;
-        }
-    };
-    let form_data: T = match serde_json::from_value(form_data_json) {
-        Ok(form_data) => form_data,
-        Err(e) => {
-            println!("{}", e);
-            delete_directory_if_exists(&tmp_path);
-            return err;
-        }
-    };
-    Ok((form_data, tmp_path))
+    Ok((form_data_map, tmp_path))
 }
 
-
-async fn parse_json_value(field: &mut Field) -> Value {
-    let mut value = Vec::new();
-    while let Some(chunk) = field.next().await {
-        let chunk = chunk.unwrap();
-        value.extend_from_slice(&chunk);
+pub fn parse_option_vec_string(value : Option<&Vec<Value>>)-> Option<Vec<String>>{
+    if value!=None{
+        let v : Vec<String> =  value.into_iter().map(|data|data.into_iter().map(|s|s.as_str().unwrap().to_string()).collect()).collect();
+        Option::from(v)
+    }else{
+        None
     }
-    let value_str = String::from_utf8(value).unwrap();
-    // Determine the appropriate type and convert the string value accordingly
-    let json_value = if value_str.trim().starts_with('"') && value_str.trim().ends_with('"') {
-        Value::String(value_str)
-    } else if let Ok(parsed_bool) = value_str.parse::<bool>() {
-        Value::Bool(parsed_bool)
-    } else if let Ok(parsed_i32) = value_str.parse::<i32>() {
-        Value::Number(parsed_i32.into())
-    } else if let Ok(parsed_f64) = value_str.parse::<f64>() {
-        Value::Number(serde_json::Number::from_f64(parsed_f64).unwrap())
-    } else if let Ok(parsed_datetime) = chrono::DateTime::parse_from_rfc3339(&value_str).map(|dt| dt.with_timezone(&chrono::Utc)) {
-        Value::String(parsed_datetime.to_rfc3339())
-    } else {
-        Value::String(value_str)
-    };
-    json_value
 }
+
+pub fn parse_option_date_time(value : Option<&str>)-> Option<String>{
+   if value!=None{
+       Option::from(value.map(|s|chrono::DateTime::parse_from_rfc3339(s).map(|dt| dt.with_timezone(&chrono::Utc)).unwrap().to_string()) )
+   }else{
+       None
+   }
+}
+
 
 pub fn get_file_metadata(file_path: &str) -> FileMetadata {
     let metadata = fs::metadata(file_path).unwrap();

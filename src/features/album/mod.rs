@@ -11,6 +11,7 @@ pub mod services;
 pub fn configure(cfg: &mut web::ServiceConfig) {
     cfg.service(create_album);
     cfg.service(get_albums);
+    cfg.service(add_album_cover);
 
     cfg.service(
         web::scope("/album")
