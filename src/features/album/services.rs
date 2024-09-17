@@ -6,6 +6,7 @@ use crate::common::models::file_metadata::ImageMetadata;
 use crate::common::models::response_data::ResponseData;
 use crate::common::utils::{delete_directory_if_exists, delete_file_if_exists, get_data_directory, get_file_metadata, get_project_directory, move_file_and_replace};
 use crate::features::album::models;
+use crate::features::album::models::AlbumResponse;
 use crate::features::album::repository::Repository;
 
 pub struct Service;
@@ -50,7 +51,7 @@ impl Service {
         pool: &DbPool,
         album_uuid: String,
         update_album: models::UpdateAlbumRequest,
-    ) -> Result<models::Album, &str> {
+    ) -> Result<models::AlbumResponse, &str> {
         let album = Repository::get_album_by_uuid(pool, album_uuid).await.expect("Album not found");
         let old_url = album.url.clone();
         let mut new_album = models::Album {
@@ -96,7 +97,7 @@ impl Service {
                         let des_file_path = format!("{}/{}", get_project_directory(), new_album.url);
                         move_file_and_replace(&src_file_path, &des_file_path);
                     }
-                    Ok(new_album)
+                    Ok(AlbumResponse::from_album(new_album))
                 }
             Ok(_) => {
                 Err("Album not found")

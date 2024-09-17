@@ -7,7 +7,7 @@ use crate::common::models::response_message::ResponseMessage;
 use crate::common::utils::{
     delete_directory_if_exists, parse_payload_data,
 };
-use crate::features::album::models::{AddAlbumCoverRequest, CreateAlbumRequest, GetAlbumRequest, UpdateAlbumRequest};
+use crate::features::album::models::{AddAlbumCoverRequest, AlbumResponse, CreateAlbumRequest, GetAlbumRequest, UpdateAlbumRequest};
 use crate::features::album::services::Service;
 use crate::features::check_role;
 
@@ -117,7 +117,7 @@ pub async fn get_albums(
         content_type = "multipart/form-data",
     ),
     responses(
-        (status = 200, description = "Update successfully"),
+        (status = 200, description = "Update successfully", body = AlbumResponse),
         (status = 400, description = "Update failed", body = ResponseMessage),
         (status = 401, description = "Unauthorized error", body = ResponseMessage),
         (status = 500, description = "Internal server error", body = ResponseMessage)
@@ -140,7 +140,7 @@ pub async fn update_album(
             Ok((payload_data, tmp_path)) => {
                 let req_data = UpdateAlbumRequest::from_payload_data(payload_data).await;
                 match Service::update_album(&pool, album_uuid, req_data).await {
-                    Ok(new_album) => HttpResponse::Created().json(new_album),
+                    Ok(updated_album) => HttpResponse::Ok().json(updated_album),
                     Err(e) => {
                         println!("Failed to update album: {}", e);
                         delete_directory_if_exists(&tmp_path);
