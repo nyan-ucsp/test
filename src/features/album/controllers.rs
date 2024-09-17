@@ -1,10 +1,12 @@
 use actix_multipart::Multipart;
-use actix_web::{delete, HttpRequest, HttpResponse, post, Responder, web};
+use actix_web::{delete, post, web, HttpRequest, HttpResponse, Responder};
 
 use crate::common::database::DbPool;
 use crate::common::enums::Role::Admin;
 use crate::common::models::response_message::ResponseMessage;
-use crate::common::utils::{delete_directory_if_exists, get_project_directory, parse_payload_data, save_file_to_directory};
+use crate::common::utils::{
+    delete_directory_if_exists, parse_payload_data,
+};
 use crate::features::album::models::{AddAlbumCoverRequest, CreateAlbumRequest, GetAlbumRequest, UpdateAlbumRequest};
 use crate::features::album::services::Service;
 use crate::features::check_role;
@@ -21,7 +23,7 @@ use crate::features::check_role;
         content_type = "multipart/form-data",
     ),
     responses(
-        (status = 201, description = "Created successfully", body = Album),
+        (status = 201, description = "Created successfully", body = AlbumResponse),
         (status = 401, description = "Unauthorized error", body = ResponseMessage),
         (status = 500, description = "Internal server error", body = ResponseMessage)
     ),
@@ -39,7 +41,7 @@ pub async fn create_album(
     if check_role(http_request) == Admin {
         match parse_payload_data(payload).await {
             Ok((payload_data, tmp_path)) => {
-                let req_data  = CreateAlbumRequest::from_payload_data(payload_data).await;
+                let req_data = CreateAlbumRequest::from_payload_data(payload_data).await;
                 match Service::create_album(&pool, req_data).await {
                     Ok(new_album) => {
                         delete_directory_if_exists(&tmp_path);
@@ -133,28 +135,27 @@ pub async fn update_album(
     payload: Multipart,
 ) -> impl Responder {
     if check_role(http_request) == Admin {
-        HttpResponse::Ok().json(ResponseMessage{message:String::from("Success")})
-        // let album_uuid = path.into_inner();
-        // match parse_payload_data::<UpdateAlbumRequest>(payload).await {
-        //
-        //
-        //     Ok((req_data, tmp_path)) => {
-        //
-        //         match Service::update_album(&pool, album_uuid, req_data).await {
-        //             Ok(new_album) => {
-        //                 HttpResponse::Created().json(new_album)
-        //             }
-        //             Err(e) => {
-        //                 println!("Failed to update album: {}", e);
-        //                 delete_directory_if_exists(&tmp_path);
-        //                 HttpResponse::BadRequest().json(ResponseMessage {
-        //                     message: String::from("Failed to update album"),
-        //                 })
-        //             }
-        //         }
-        //     }
-        //     Err(e) => e,
-        // }
+        let album_uuid = path.into_inner();
+        match parse_payload_data(payload).await {
+            Ok((payload_data, tmp_path)) => {
+                let req_data = UpdateAlbumRequest::from_payload_data(payload_data).await;
+                match Service::update_album(&pool, album_uuid, req_data).await {
+                    Ok(new_album) => HttpResponse::Created().json(new_album),
+                    Err(e) => {
+                        println!("Failed to update album: {}", e);
+                        delete_directory_if_exists(&tmp_path);
+                        HttpResponse::BadRequest().json(ResponseMessage {
+                            message: String::from("Failed to update album"),
+                        })
+                    }
+                }
+            }
+            Err(e) => {
+                HttpResponse::BadRequest().json(ResponseMessage {
+                    message: String::from(e),
+                })
+            }
+        }
     } else {
         HttpResponse::Unauthorized().json(ResponseMessage {
             message: String::from("Unauthorized"),
@@ -174,7 +175,7 @@ pub async fn update_album(
         content_type = "multipart/form-data",
     ),
     responses(
-        (status = 201, description = "Add successfully"),
+        (status = 201, description = "Add successfully", body = AlbumResponse),
         (status = 400, description = "Update failed", body = ResponseMessage),
         (status = 401, description = "Unauthorized error", body = ResponseMessage),
         (status = 500, description = "Internal server error", body = ResponseMessage)
@@ -192,17 +193,24 @@ pub async fn add_album_cover(
     payload: Multipart,
 ) -> impl Responder {
     if check_role(http_request) == Admin {
-        HttpResponse::Ok().json(ResponseMessage{message:String::from("Success")})
-        // let album_uuid = path.into_inner();
-        // match parse_payload_data::<AddAlbumCoverRequest>(payload).await {
-        //     Ok((req_data, tmp_path)) => {
-        //         HttpResponse::Ok().json(ResponseMessage {
-        //             message: String::from("OK"),
-        //         })
-        //     }
-        //     Err(e) => e,
-        // }
-
+        let album_uuid = path.into_inner();
+        match parse_payload_data(payload).await {
+            Ok((payload_data, tmp_path)) => {
+                let req_data = AddAlbumCoverRequest::from_payload_data(payload_data).await;
+                match Service::add_album_covers(&pool, album_uuid, req_data).await {
+                    Ok(album_response) => HttpResponse::Created().json(album_response),
+                    Err(e) => {
+                        delete_directory_if_exists(&tmp_path);
+                        HttpResponse::BadRequest().json(ResponseMessage {
+                            message: String::from(e),
+                        })
+                    }
+                }
+            }
+            Err(e) => HttpResponse::BadRequest().json(ResponseMessage {
+                message: String::from(e),
+            }),
+        }
     } else {
         HttpResponse::Unauthorized().json(ResponseMessage {
             message: String::from("Unauthorized"),

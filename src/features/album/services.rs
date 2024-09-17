@@ -1,4 +1,3 @@
-use std::error::Error;
 use chrono::Utc;
 use uuid::Uuid;
 
@@ -17,27 +16,26 @@ impl Service {
         req_data: models::CreateAlbumRequest,
     ) -> Result<models::AlbumResponse, &str> {
         let image_src_file_path = req_data.image.clone();
-        let cover_src_files_paths : Vec<String> = req_data.clone().covers.unwrap_or(vec![]);
+        let cover_src_files_paths: Vec<String> = req_data.clone().covers.unwrap_or(vec![]);
         let new_album = models::NewAlbum::from_request(req_data);
         let image_des_file_path = format!("{}/{}", get_project_directory(), new_album.url.clone());
         match Repository::create_album(pool, new_album).await {
             Ok(album) => {
                 let response = models::AlbumResponse::from_album(album);
-                if response.covers.len()==cover_src_files_paths.len() {
+                if response.covers.len() == cover_src_files_paths.len() {
                     move_file_and_replace(&*image_src_file_path, &*image_des_file_path);
                     for i in 0..cover_src_files_paths.len() {
-                        move_file_and_replace(cover_src_files_paths[i].as_str(),format!("{}/{}", get_project_directory(), response.covers[i].clone()).as_str())
+                        move_file_and_replace(cover_src_files_paths[i].as_str(), format!("{}/{}", get_project_directory(), response.covers[i].clone()).as_str())
                     }
                     Ok(response)
-                }else{
+                } else {
                     Err("Some files lost on data exchanging")
                 }
-                
             }
             Err(e) => {
                 eprintln!("Error: {e}");
                 Err("Failed to create album")
-            },
+            }
         }
     }
 
@@ -52,7 +50,7 @@ impl Service {
         pool: &DbPool,
         album_uuid: String,
         update_album: models::UpdateAlbumRequest,
-    ) -> Result<models::Album, diesel::result::Error> {
+    ) -> Result<models::Album, &str> {
         let album = Repository::get_album_by_uuid(pool, album_uuid).await.expect("Album not found");
         let old_url = album.url.clone();
         let mut new_album = models::Album {
@@ -84,8 +82,8 @@ impl Service {
             new_album.width = file_meta_data.image_data.clone().unwrap_or(ImageMetadata::default()).width as i32;
             new_album.height = file_meta_data.image_data.unwrap_or(ImageMetadata::default()).height as i32;
             new_album.bytes = file_meta_data.size as i32;
-            new_album.updated_at = Option::from(Utc::now().to_rfc3339());
         }
+        new_album.updated_at = Option::from(Utc::now().to_rfc3339());
         match Repository::update_album(pool, new_album.clone()).await {
             Ok(size) if size > 0 =>
                 {
@@ -101,10 +99,63 @@ impl Service {
                     Ok(new_album)
                 }
             Ok(_) => {
-                //Delete tmp data
-                Err(diesel::result::Error::NotFound)
+                Err("Album not found")
             }
-            Err(e) => Err(e),
+            Err(e) => {
+                eprintln!("Error: {e}");
+                Err("Failed to update album")
+            }
+        }
+    }
+
+
+    pub async fn add_album_covers(
+        pool: &DbPool,
+        album_uuid: String,
+        req: models::AddAlbumCoverRequest,
+    ) -> Result<models::AlbumResponse, &str> {
+        let new_cover_urls: Vec<String> = req.covers.clone().into_iter().map(|s| format!("{}/{}/{}.{}", get_data_directory(), album_uuid, Uuid::new_v4().to_string(), s.split(".").last().unwrap())).collect();
+        let album = Repository::get_album_by_uuid(pool, album_uuid).await.expect("Album not found");
+        let mut new_album = models::Album {
+            id: album.id,
+            uuid: album.uuid.clone(),
+            title: album.title,
+            description: album.description,
+            completed: album.completed,
+            covers: if new_cover_urls.is_empty() { album.covers } else { format!("{},{}", album.covers, new_cover_urls.join(",")) },
+            tags: album.tags,
+            enable: album.enable,
+            min_age: album.min_age,
+            url: album.url,
+            content_type: album.content_type,
+            width: album.width,
+            height: album.height,
+            bytes: album.bytes,
+            released_at: album.released_at,
+            broken_at: album.broken_at,
+            created_at: album.created_at,
+            updated_at: album.updated_at,
+        };
+        new_album.updated_at = Option::from(Utc::now().to_rfc3339());
+        match Repository::update_album(pool, new_album.clone()).await {
+            Ok(size) if size > 0 =>
+                {
+                    if new_cover_urls.len() == req.covers.len() {
+                        for i in 0..req.covers.len() {
+                            move_file_and_replace(req.covers[i].as_str(), format!("{}/{}", get_project_directory(), new_cover_urls[i].clone()).as_str())
+                        }
+                        Ok(models::AlbumResponse::from_album(new_album.clone()))
+                    } else {
+                        Err("Some files lost on data exchanging")
+                    }
+                }
+            Ok(_) => {
+                Err("Album not found")
+            }
+            Err(e) => {
+                eprintln!("Error: {e}");
+                Err("Failed to add album covers")
+            }
         }
     }
 

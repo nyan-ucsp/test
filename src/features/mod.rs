@@ -1,12 +1,12 @@
-use actix_web::{HttpMessage, HttpRequest, web};
-use utoipa::{Modify, OpenApi};
-use utoipa::openapi::Components;
+use actix_web::{web, HttpMessage, HttpRequest};
 use utoipa::openapi::security::{ApiKey, ApiKeyValue, SecurityScheme};
+use utoipa::openapi::Components;
+use utoipa::{Modify, OpenApi};
 
 use crate::common::enums::Role;
 use crate::common::enums::Role::*;
-use crate::common::models::response_message::ResponseMessage;
 use crate::common::models::response_data::*;
+use crate::common::models::response_message::ResponseMessage;
 
 pub mod album;
 pub mod health_check;
@@ -15,6 +15,8 @@ pub fn config_routes(cfg: &mut web::ServiceConfig) {
     album::configure(cfg);
     health_check::configure(cfg);
 }
+
+struct SecurityAddon;
 
 #[derive(OpenApi)]
 #[openapi
@@ -30,6 +32,7 @@ pub fn config_routes(cfg: &mut web::ServiceConfig) {
     components(
         schemas(
             album::models::Album,
+            album::models::AlbumResponse,
             album::models::CreateAlbumRequest,
             album::models::UpdateAlbumRequest,
             album::models::GetAlbumRequest,
@@ -45,8 +48,6 @@ pub fn config_routes(cfg: &mut web::ServiceConfig) {
     ),
 )]
 pub struct ApiDoc;
-
-struct SecurityAddon;
 
 impl Modify for SecurityAddon {
     fn modify(&self, openapi: &mut utoipa::openapi::OpenApi) {

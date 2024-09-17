@@ -1,9 +1,9 @@
-use std::{env, fs};
 use std::collections::HashMap;
 use std::io::Write;
 use std::path::Path;
+use std::{env, fs};
 
-use actix_multipart::{Field, Multipart};
+use actix_multipart::Multipart;
 use futures_util::StreamExt;
 use image::GenericImageView;
 use mime_guess::from_path;
@@ -12,7 +12,6 @@ use uuid::Uuid;
 
 use crate::common::enums::FileDataMap;
 use crate::common::models::file_metadata::{FileMetadata, ImageMetadata, VideoMetadata};
-use crate::common::models::response_message::ResponseMessage;
 
 pub fn save_file_to_directory(filepath: &str, bytes: &Vec<u8>) {
     create_directory_if_not_exists(filepath);
@@ -120,27 +119,31 @@ pub async fn parse_payload_data(mut payload: Multipart) -> Result<(HashMap<Strin
         }
     }
     // Convert File Data HashMap to JSON value and then insert to FormData struct
-    for (key, mut paths) in file_data_map {
+    for (key, paths) in file_data_map {
         form_data_map.insert(key, Value::Array(paths.into_iter().map(Value::String).collect()));
     }
     Ok((form_data_map, tmp_path))
 }
 
-pub fn parse_option_vec_string(value : Option<&Vec<Value>>)-> Option<Vec<String>>{
-    if value!=None{
-        let v : Vec<String> =  value.into_iter().map(|data|data.into_iter().map(|s|s.as_str().unwrap().to_string()).collect()).collect();
+pub fn parse_option_vec_string(value: Option<&Vec<Value>>) -> Option<Vec<String>> {
+    if value != None {
+        let v: Vec<String> = value.into_iter().map(|data| data.into_iter().map(|s| s.as_str().unwrap().to_string()).collect()).collect();
         Option::from(v)
-    }else{
+    } else {
         None
     }
 }
 
-pub fn parse_option_date_time(value : Option<&str>)-> Option<String>{
-   if value!=None{
-       Option::from(value.map(|s|chrono::DateTime::parse_from_rfc3339(s).map(|dt| dt.with_timezone(&chrono::Utc)).unwrap().to_string()) )
-   }else{
-       None
-   }
+pub fn parse_option_date_time(value: Option<&str>) -> Option<String> {
+    if value != None && !value.unwrap_or("").trim().is_empty() {
+        Option::from(value.map(|s| chrono::DateTime::parse_from_rfc3339(s).map(|dt| dt.with_timezone(&chrono::Utc)).unwrap().to_string()))
+    } else {
+        None
+    }
+}
+pub fn parse_string_vec(value: Option<&Vec<Value>>) -> Vec<String> {
+    let result: Vec<String> = value.unwrap_or(&Vec::new()).into_iter().map(|s| s.as_str().unwrap().to_string()).collect();
+    result
 }
 
 

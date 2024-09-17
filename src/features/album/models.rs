@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+
 use chrono::Utc;
 use diesel::prelude::*;
 use futures_util::StreamExt;
@@ -8,8 +9,7 @@ use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
 
 use crate::common::models::file_metadata::ImageMetadata;
-use crate::common::models::response_message::ResponseMessage;
-use crate::common::utils::{create_directory_if_not_exists, delete_directory_if_exists, get_data_directory, get_file_metadata, get_project_directory, parse_option_date_time, parse_option_vec_string, parse_payload_data, save_file_to_directory};
+use crate::common::utils::{get_data_directory, get_file_metadata, parse_option_date_time, parse_string_vec};
 use crate::schema::albums;
 
 #[derive(
@@ -52,6 +52,7 @@ pub struct Album {
     Serialize,
     Deserialize,
     Clone,
+    ToSchema,
     IntoParams,
     PartialEq,
     Eq
@@ -116,7 +117,7 @@ pub struct CreateAlbumRequest {
     #[schema(value_type = String, format = Binary)]
     pub image: String,
     /// Album Description Images **Accept Only JPG**
-    #[schema(value_type = Option<Vec<String>>, format = Binary)]
+    #[schema(value_type = Option < Vec < String >>, format = Binary)]
     pub covers: Option<Vec<String>>,
     /// Completed or End album default is false
     #[schema(example = false)]
@@ -137,10 +138,10 @@ pub struct CreateAlbumRequest {
 
 impl CreateAlbumRequest {
     pub async fn from_payload_data(payload_data: HashMap<String, Value>) -> Self {
-        let image_paths: Vec<String> = payload_data["image"].as_array().unwrap().iter().map(|value| value.as_str().unwrap().to_string()).collect();
-        let mut  cover_paths : Vec<String> = vec![];
+        let image_paths: Vec<String> = parse_string_vec(payload_data["image"].as_array());
+        let mut cover_paths: Vec<String> = vec![];
         if !payload_data["covers"].is_null() {
-            cover_paths =payload_data["covers"].as_array().unwrap().into_iter().map(|s| s.as_str().unwrap().to_string()).collect();
+            cover_paths = parse_string_vec(Some(payload_data["covers"].as_array().unwrap_or(&Vec::new())));
         }
 
         CreateAlbumRequest {
@@ -186,11 +187,43 @@ pub struct UpdateAlbumRequest {
     pub broken_at: Option<String>,
 }
 
+impl UpdateAlbumRequest {
+    pub async fn from_payload_data(payload_data: HashMap<String, Value>) -> Self {
+        let mut image_paths: Vec<String> = vec![];
+        if !payload_data["image"].is_null() {
+            image_paths = payload_data["image"].as_array().unwrap_or(&Vec::new()).into_iter().map(|s| s.as_str().unwrap().to_string()).collect();
+        }
+
+        UpdateAlbumRequest {
+            title: payload_data["title"].as_str().unwrap().to_string(),
+            description: payload_data["description"].as_str().unwrap().to_string(),
+            image: Some(image_paths.first().unwrap().to_string()),
+            completed: payload_data["completed"].as_bool(),
+            tags: payload_data["tags"].as_str().map(|value| value.to_string()),
+            enable: payload_data["enable"].as_bool(),
+            min_age: payload_data["min_age"].as_i64().map(|value| value.try_into().unwrap()),
+            released_at: parse_option_date_time(payload_data["released_at"].as_str()),
+            broken_at: parse_option_date_time(payload_data["released_at"].as_str()),
+        }
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct AddAlbumCoverRequest {
     /// Album Covers **Accept Only JPG**
     #[schema(value_type = Vec < String >, format = Binary)]
     pub covers: Vec<String>,
+}
+
+
+impl AddAlbumCoverRequest {
+    pub async fn from_payload_data(payload_data: HashMap<String, Value>) -> Self {
+        let mut cover_paths = parse_string_vec(payload_data["covers"].as_array());
+
+        AddAlbumCoverRequest {
+            covers: cover_paths
+        }
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
