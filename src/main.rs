@@ -1,8 +1,9 @@
 use std::env;
 
+use crate::common::middleware::response_time_middleware::ResponseTime;
 use actix_cors::Cors;
 use actix_files::Files;
-use actix_web::{App, HttpServer, middleware::Logger, web};
+use actix_web::{middleware::Logger, web, App, HttpServer};
 use dotenvy::dotenv;
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
@@ -42,6 +43,7 @@ async fn main() -> std::io::Result<()> {
             .wrap(cors)
             .app_data(web::Data::new(connection.clone()))
             .configure(features::config_routes)
+            .wrap(ResponseTime)
             .service(
                 SwaggerUi::new("/swagger/{_:.*}").url("/api-docs/openapi.json", openapi.clone()),
             )

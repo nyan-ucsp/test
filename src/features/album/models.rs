@@ -197,7 +197,7 @@ impl UpdateAlbumRequest {
         UpdateAlbumRequest {
             title: payload_data["title"].as_str().unwrap().to_string(),
             description: payload_data["description"].as_str().unwrap().to_string(),
-            image: if(image_paths.is_empty()) { None } else { Some(image_paths.first().unwrap().to_string()) },
+            image: if image_paths.is_empty() { None } else { Some(image_paths.first().unwrap().to_string()) },
             completed: payload_data["completed"].as_bool(),
             tags: payload_data["tags"].as_str().map(|value| value.to_string()),
             enable: payload_data["enable"].as_bool(),
@@ -212,6 +212,12 @@ impl UpdateAlbumRequest {
 pub struct AddAlbumCoverRequest {
     /// Album Covers **Accept Only JPG**
     #[schema(value_type = Vec < String >, format = Binary)]
+    pub covers: Vec<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
+pub struct RemoveAlbumCoverRequest {
+    /// Album Covers
     pub covers: Vec<String>,
 }
 

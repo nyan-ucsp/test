@@ -4,7 +4,7 @@ use uuid::Uuid;
 use crate::common::database::DbPool;
 use crate::common::models::file_metadata::ImageMetadata;
 use crate::common::models::response_data::ResponseData;
-use crate::common::utils::{delete_directory_if_exists, delete_file_if_exists, get_data_directory, get_file_metadata, get_project_directory, move_file_and_replace};
+use crate::common::utils::{delete_directory_if_exists, delete_file_if_exists, get_data_directory, get_file_metadata, get_project_directory, move_file_and_replace, remove_values_from_vec_string};
 use crate::features::album::models;
 use crate::features::album::models::AlbumResponse;
 use crate::features::album::repository::Repository;
@@ -115,7 +115,8 @@ impl Service {
         album_uuid: String,
         req: models::AddAlbumCoverRequest,
     ) -> Result<models::AlbumResponse, &str> {
-        let new_cover_urls: Vec<String> = req.covers.clone().into_iter().map(|s| format!("{}/{}/{}.{}", get_data_directory(), album_uuid, Uuid::new_v4().to_string(), s.split(".").last().unwrap())).collect();
+        let mut new_cover_urls: Vec<String> = req.covers.clone().into_iter().map(|s| format!("{}/{}/{}.{}", get_data_directory(), album_uuid, Uuid::new_v4().to_string(), s.split(".").last().unwrap())).collect();
+        new_cover_urls.retain(|s| !s.trim().is_empty());
         let album = Repository::get_album_by_uuid(pool, album_uuid).await.expect("Album not found");
         let mut new_album = models::Album {
             id: album.id,
@@ -156,6 +157,55 @@ impl Service {
             Err(e) => {
                 eprintln!("Error: {e}");
                 Err("Failed to add album covers")
+            }
+        }
+    }
+
+    pub async fn remove_album_covers(
+        pool: &DbPool,
+        album_uuid: String,
+        req: models::RemoveAlbumCoverRequest,
+    ) -> Result<models::AlbumResponse, &str> {
+        let album = Repository::get_album_by_uuid(pool, album_uuid).await.expect("Album not found");
+        let old_album_covers: Vec<String> = album.covers.split(',').map(|cover| cover.to_string()).collect();
+        let album_covers: &mut Vec<String> = &mut old_album_covers.clone();
+        remove_values_from_vec_string(&req.covers.clone(), album_covers);
+        album_covers.retain(|s| !s.trim().is_empty());
+        let new_covers = album_covers.join(",");
+        let mut new_album = models::Album {
+            id: album.id,
+            uuid: album.uuid.clone(),
+            title: album.title,
+            description: album.description,
+            completed: album.completed,
+            covers: new_covers,
+            tags: album.tags,
+            enable: album.enable,
+            min_age: album.min_age,
+            url: album.url,
+            content_type: album.content_type,
+            width: album.width,
+            height: album.height,
+            bytes: album.bytes,
+            released_at: album.released_at,
+            broken_at: album.broken_at,
+            created_at: album.created_at,
+            updated_at: album.updated_at,
+        };
+        match Repository::update_album(pool, new_album.clone()).await {
+            Ok(size) if size > 0 =>
+                {
+                    for i in req.covers {
+                        delete_file_if_exists(i.as_str());
+                    }
+                    Ok(models::AlbumResponse::from_album(new_album.clone()))
+                }
+            Ok(_) => {
+                Err("Album not found")
+            }
+            Err(e) => {
+                eprintln!("Error: {e}");
+                Err("Failed to remove album covers")
             }
         }
     }

@@ -1,5 +1,5 @@
 use actix_multipart::Multipart;
-use actix_web::{delete, post, web, HttpRequest, HttpResponse, Responder};
+use actix_web::{delete, post, put, web, HttpRequest, HttpResponse, Responder};
 
 use crate::common::database::DbPool;
 use crate::common::enums::Role::Admin;
@@ -7,7 +7,7 @@ use crate::common::models::response_message::ResponseMessage;
 use crate::common::utils::{
     delete_directory_if_exists, parse_payload_data,
 };
-use crate::features::album::models::{AddAlbumCoverRequest, AlbumResponse, CreateAlbumRequest, GetAlbumRequest, UpdateAlbumRequest};
+use crate::features::album::models::{AddAlbumCoverRequest, CreateAlbumRequest, GetAlbumRequest, RemoveAlbumCoverRequest, UpdateAlbumRequest};
 use crate::features::album::services::Service;
 use crate::features::check_role;
 
@@ -109,7 +109,7 @@ pub async fn get_albums(
 ///
 /// Update album
 #[utoipa::path(
-    post,
+    put,
     path = "/album/{album_uuid}",
     request_body(
         content = UpdateAlbumRequest,
@@ -127,7 +127,7 @@ pub async fn get_albums(
     ),
     tag = "Album",
 )]
-#[post("/{album_uuid}")]
+#[put("/{album_uuid}")]
 pub async fn update_album(
     pool: web::Data<DbPool>,
     http_request: HttpRequest,
@@ -140,7 +140,10 @@ pub async fn update_album(
             Ok((payload_data, tmp_path)) => {
                 let req_data = UpdateAlbumRequest::from_payload_data(payload_data).await;
                 match Service::update_album(&pool, album_uuid, req_data).await {
-                    Ok(updated_album) => HttpResponse::Ok().json(updated_album),
+                    Ok(updated_album) => {
+                        delete_directory_if_exists(&tmp_path);
+                        HttpResponse::Ok().json(updated_album)
+                    }
                     Err(e) => {
                         println!("Failed to update album: {}", e);
                         delete_directory_if_exists(&tmp_path);
@@ -167,7 +170,7 @@ pub async fn update_album(
 ///
 /// Add album covers
 #[utoipa::path(
-    post,
+    put,
     path = "/album/{album_uuid}/add-covers",
     request_body(
         content = AddAlbumCoverRequest,
@@ -185,7 +188,7 @@ pub async fn update_album(
     ),
     tag = "Album",
 )]
-#[post("/album/{album_uuid}/add-covers")]
+#[put("/album/{album_uuid}/add-covers")]
 pub async fn add_album_cover(
     pool: web::Data<DbPool>,
     http_request: HttpRequest,
@@ -198,7 +201,10 @@ pub async fn add_album_cover(
             Ok((payload_data, tmp_path)) => {
                 let req_data = AddAlbumCoverRequest::from_payload_data(payload_data).await;
                 match Service::add_album_covers(&pool, album_uuid, req_data).await {
-                    Ok(album_response) => HttpResponse::Created().json(album_response),
+                    Ok(album_response) => {
+                        delete_directory_if_exists(&tmp_path);
+                        HttpResponse::Created().json(album_response)
+                    }
                     Err(e) => {
                         delete_directory_if_exists(&tmp_path);
                         HttpResponse::BadRequest().json(ResponseMessage {
@@ -210,6 +216,50 @@ pub async fn add_album_cover(
             Err(e) => HttpResponse::BadRequest().json(ResponseMessage {
                 message: String::from(e),
             }),
+        }
+    } else {
+        HttpResponse::Unauthorized().json(ResponseMessage {
+            message: String::from("Unauthorized"),
+        })
+    }
+}
+
+/// Remove Album Covers
+///
+/// Remove album covers
+#[utoipa::path(
+    put,
+    path = "/album/{album_uuid}/remove-covers",
+    request_body = RemoveAlbumCoverRequest,
+    responses(
+        (status = 200, description = "Remove successfully",body = AlbumResponse),
+        (status = 400, description = "Delete Not Found", body = ResponseMessage),
+        (status = 401, description = "Unauthorized error", body = ResponseMessage),
+        (status = 500, description = "Internal server error", body = ResponseMessage)
+    ),
+    security(
+        ("api_key" = [])
+    ),
+    tag = "Album",
+)]
+#[put("/{album_uuid}/remove-covers")]
+pub async fn remove_album_cover(
+    pool: web::Data<DbPool>,
+    http_request: HttpRequest,
+    path: web::Path<String>,
+    req: web::Json<RemoveAlbumCoverRequest>,
+) -> impl Responder {
+    if check_role(http_request) == Admin {
+        let album_uuid = path.into_inner();
+        let req_rmv_album_cover = req.into_inner();
+        match Service::remove_album_covers(&pool, album_uuid, req_rmv_album_cover).await {
+            Ok(response) => HttpResponse::Ok().json(response),
+            Err(e) => {
+                println!("Failed to remove album covers: {}", e);
+                HttpResponse::BadRequest().json(ResponseMessage {
+                    message: String::from("Failed to remove album covers"),
+                })
+            }
         }
     } else {
         HttpResponse::Unauthorized().json(ResponseMessage {

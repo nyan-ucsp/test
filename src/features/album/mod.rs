@@ -17,5 +17,6 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
         web::scope("/album")
             .service(update_album)
             .service(delete_album)
+            .service(remove_album_cover)
     );
 }

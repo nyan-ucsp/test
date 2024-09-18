@@ -27,6 +27,7 @@ struct SecurityAddon;
         album::controllers::update_album,
         album::controllers::delete_album,
         album::controllers::add_album_cover,
+        album::controllers::remove_album_cover,
         health_check::controllers::get_health,
     ),
     components(
@@ -37,6 +38,7 @@ struct SecurityAddon;
             album::models::UpdateAlbumRequest,
             album::models::GetAlbumRequest,
             album::models::AddAlbumCoverRequest,
+            album::models::RemoveAlbumCoverRequest,
             ResponseMessage,
             ResponseDataAlbum
         )

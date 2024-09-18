@@ -194,3 +194,8 @@ fn get_image_metadata(file_path: &str) -> Option<ImageMetadata> {
 fn is_multi_keywords(word: &str) -> bool {
     word.ends_with("s") || word.ends_with("es")
 }
+
+pub fn remove_values_from_vec_string<'a>(filter_vec: &Vec<String>, original_vec: &'a mut Vec<String>) -> &'a mut Vec<String> {
+    original_vec.retain(|value| !filter_vec.contains(value));
+    original_vec
+}
