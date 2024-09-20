@@ -7,7 +7,7 @@ create table if not exists albums
     title text not null,
     description text not null,
     completed boolean not null default 0,
-    covers text not null,
+    images text not null,
     tags text,
     enable boolean not null default 1,
     min_age int not null default 0,

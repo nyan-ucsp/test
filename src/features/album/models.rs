@@ -32,7 +32,7 @@ pub struct Album {
     pub title: String,
     pub description: String,
     pub completed: bool,
-    pub covers: String,
+    pub images: String,
     pub tags: Option<String>,
     pub enable: bool,
     pub min_age: i32,
@@ -63,7 +63,7 @@ pub struct AlbumResponse {
     pub title: String,
     pub description: String,
     pub completed: bool,
-    pub covers: Vec<String>,
+    pub images: Vec<String>,
     pub tags: Option<String>,
     pub enable: bool,
     pub min_age: i32,
@@ -86,7 +86,7 @@ impl AlbumResponse {
             title: album.title,
             description: album.description,
             completed: album.completed,
-            covers: album.covers
+            images: album.images
                 .split(",")
                 .filter(|s| !s.is_empty())
                 .map(String::from)
@@ -115,10 +115,10 @@ pub struct CreateAlbumRequest {
     pub description: String,
     /// Album Cover **Accept Only JPG**
     #[schema(value_type = String, format = Binary)]
-    pub image: String,
+    pub cover: String,
     /// Album Description Images **Accept Only JPG**
     #[schema(value_type = Option < Vec < String >>, format = Binary)]
-    pub covers: Option<Vec<String>>,
+    pub images: Option<Vec<String>>,
     /// Completed or End album default is false
     #[schema(example = false)]
     pub completed: Option<bool>,
@@ -138,22 +138,22 @@ pub struct CreateAlbumRequest {
 
 impl CreateAlbumRequest {
     pub async fn from_payload_data(payload_data: HashMap<String, Value>) -> Self {
-        let image_paths: Vec<String> = parse_string_vec(payload_data["image"].as_array());
+        let image_paths: Vec<String> = parse_string_vec(payload_data["cover"].as_array());
         let mut cover_paths: Vec<String> = vec![];
-        if !payload_data["covers"].is_null() {
-            cover_paths = parse_string_vec(Some(payload_data["covers"].as_array().unwrap_or(&Vec::new())));
+        if payload_data.contains_key("images") && !payload_data["images"].is_null() {
+            cover_paths = parse_string_vec(Some(payload_data["images"].as_array().unwrap_or(&Vec::new())));
         }
 
         CreateAlbumRequest {
             title: payload_data["title"].as_str().unwrap().to_string(),
             description: payload_data["description"].as_str().unwrap().to_string(),
-            image: image_paths.first().unwrap().to_string(),
-            covers: Option::from(cover_paths),
-            completed: payload_data["completed"].as_bool(),
-            tags: payload_data["tags"].as_str().map(|value| value.to_string()),
-            enable: payload_data["enable"].as_bool(),
-            min_age: payload_data["min_age"].as_i64().map(|value| value.try_into().unwrap()),
-            released_at: parse_option_date_time(payload_data["released_at"].as_str()),
+            cover: image_paths.first().unwrap().to_string(),
+            images: Option::from(cover_paths),
+            completed: if payload_data.contains_key("completed") { payload_data["completed"].as_bool() }else{Some(false)},
+            tags: if payload_data.contains_key("tags") {payload_data["tags"].as_str().map(|value| value.to_string())}else{Some(String::from(""))},
+            enable: if payload_data.contains_key("completed") {  payload_data["enable"].as_bool()} else { Some(true) },
+            min_age: if payload_data.contains_key("min_age") { payload_data["min_age"].as_i64().map(|value| value.try_into().unwrap()) }else{Some(0)},
+            released_at: if payload_data.contains_key("released_at") { parse_option_date_time(payload_data["released_at"].as_str())} else {None},
         }
     }
 }
@@ -166,7 +166,7 @@ pub struct UpdateAlbumRequest {
     pub description: String,
     /// Album Default Cover **Accept Only JPG**
     #[schema(value_type = Option < String >, format = Binary)]
-    pub image: Option<String>,
+    pub cover: Option<String>,
     /// Completed or End album default is false
     #[schema(example = false)]
     pub completed: Option<bool>,
@@ -190,14 +190,14 @@ pub struct UpdateAlbumRequest {
 impl UpdateAlbumRequest {
     pub async fn from_payload_data(payload_data: HashMap<String, Value>) -> Self {
         let mut image_paths: Vec<String> = vec![];
-        if !payload_data["image"].is_null() {
-            image_paths = payload_data["image"].as_array().unwrap_or(&Vec::new()).into_iter().map(|s| s.as_str().unwrap().to_string()).collect();
+        if !payload_data["cover"].is_null() {
+            image_paths = payload_data["cover"].as_array().unwrap_or(&Vec::new()).into_iter().map(|s| s.as_str().unwrap().to_string()).collect();
         }
 
         UpdateAlbumRequest {
             title: payload_data["title"].as_str().unwrap().to_string(),
             description: payload_data["description"].as_str().unwrap().to_string(),
-            image: if image_paths.is_empty() { None } else { Some(image_paths.first().unwrap().to_string()) },
+            cover: if image_paths.is_empty() { None } else { Some(image_paths.first().unwrap().to_string()) },
             completed: payload_data["completed"].as_bool(),
             tags: payload_data["tags"].as_str().map(|value| value.to_string()),
             enable: payload_data["enable"].as_bool(),
@@ -209,25 +209,25 @@ impl UpdateAlbumRequest {
 }
 
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
-pub struct AddAlbumCoverRequest {
-    /// Album Covers **Accept Only JPG**
+pub struct AddAlbumImagesRequest {
+    /// Album Images **Accept Only JPG**
     #[schema(value_type = Vec < String >, format = Binary)]
-    pub covers: Vec<String>,
+    pub images: Vec<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
-pub struct RemoveAlbumCoverRequest {
+pub struct RemoveAlbumImagesRequest {
     /// Album Covers
-    pub covers: Vec<String>,
+    pub images: Vec<String>,
 }
 
 
-impl AddAlbumCoverRequest {
+impl AddAlbumImagesRequest {
     pub async fn from_payload_data(payload_data: HashMap<String, Value>) -> Self {
-        let mut cover_paths = parse_string_vec(payload_data["covers"].as_array());
+        let mut cover_paths = if payload_data.contains_key("images") { parse_string_vec(payload_data["images"].as_array()) }else{vec![]};
 
-        AddAlbumCoverRequest {
-            covers: cover_paths
+        AddAlbumImagesRequest {
+            images: cover_paths
         }
     }
 }
@@ -272,7 +272,7 @@ pub struct NewAlbum {
     pub title: String,
     pub description: String,
     pub completed: bool,
-    pub covers: String,
+    pub images: String,
     pub tags: Option<String>,
     pub enable: bool,
     pub min_age: i32,
@@ -289,17 +289,17 @@ impl NewAlbum {
     pub fn from_request(req: CreateAlbumRequest) -> Self {
         let album_uuid = Uuid::new_v4().to_string();
         let image_uuid = Uuid::new_v4().to_string();
-        let file_metadata = get_file_metadata(&req.image);
+        let file_metadata = get_file_metadata(&req.cover);
         let format = file_metadata.original_name.split(".").last().unwrap();
         let url = format!("{}/{}/{}.{}", get_data_directory(), album_uuid, image_uuid, format);
-        let covers: Vec<String> = req.covers.unwrap_or(vec![]).into_iter().map(|s| format!("{}/{}/{}.{}", get_data_directory(), album_uuid, Uuid::new_v4().to_string(), s.split(".").last().unwrap())).collect();
+        let images: Vec<String> = req.images.unwrap_or(vec![]).into_iter().map(|s| format!("{}/{}/{}.{}", get_data_directory(), album_uuid, Uuid::new_v4().to_string(), s.split(".").last().unwrap())).collect();
 
         NewAlbum {
             uuid: album_uuid,
             title: req.title,
             description: req.description,
             completed: req.completed.unwrap_or(false),
-            covers: covers.join(","),
+            images: images.join(","),
             tags: req.tags,
             enable: req.enable.unwrap_or(true),
             min_age: req.min_age.unwrap_or(0),

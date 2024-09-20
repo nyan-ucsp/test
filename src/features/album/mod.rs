@@ -11,12 +11,13 @@ pub mod services;
 pub fn configure(cfg: &mut web::ServiceConfig) {
     cfg.service(create_album);
     cfg.service(get_albums);
-    cfg.service(add_album_cover);
+    cfg.service(get_album_by_uuid);
+    cfg.service(add_album_images);
 
     cfg.service(
         web::scope("/album")
             .service(update_album)
             .service(delete_album)
-            .service(remove_album_cover)
+            .service(remove_album_images)
     );
 }

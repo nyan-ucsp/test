@@ -100,7 +100,7 @@ impl Repository {
         let mut query = albums::table.into_boxed();
         query = query.filter(uuid.eq(album_uuid));
 
-        let result = query.get_result(&mut conn).expect("error loading album");
+        let result = query.get_result(&mut conn)?;
         Ok(result)
     }
 

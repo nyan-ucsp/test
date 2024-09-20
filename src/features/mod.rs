@@ -24,10 +24,11 @@ struct SecurityAddon;
     paths(
         album::controllers::create_album,
         album::controllers::get_albums,
+        album::controllers::get_album_by_uuid,
         album::controllers::update_album,
         album::controllers::delete_album,
-        album::controllers::add_album_cover,
-        album::controllers::remove_album_cover,
+        album::controllers::add_album_images,
+        album::controllers::remove_album_images,
         health_check::controllers::get_health,
     ),
     components(
@@ -37,8 +38,8 @@ struct SecurityAddon;
             album::models::CreateAlbumRequest,
             album::models::UpdateAlbumRequest,
             album::models::GetAlbumRequest,
-            album::models::AddAlbumCoverRequest,
-            album::models::RemoveAlbumCoverRequest,
+            album::models::AddAlbumImagesRequest,
+            album::models::RemoveAlbumImagesRequest,
             ResponseMessage,
             ResponseDataAlbum
         )
