@@ -7,6 +7,7 @@ use actix_web::{middleware::Logger, web, App, HttpServer};
 use dotenvy::dotenv;
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
+use actix_web_lab::middleware::CatchPanic;
 
 mod common;
 mod schema;
@@ -40,10 +41,11 @@ async fn main() -> std::io::Result<()> {
         App::new()
             .wrap(ResponseTime)
             .wrap(common::middleware::api_key_middleware::ApiKeyMiddleware::new(admin_key.clone(), user_key.clone(), public_routes.clone()))
-            .wrap(Logger::default())
             .wrap(cors)
             .app_data(web::Data::new(connection.clone()))
             .configure(features::config_routes)
+            .wrap(CatchPanic::default())
+            .wrap(Logger::default())
             .service(
                 SwaggerUi::new("/swagger/{_:.*}").url("/api-docs/openapi.json", openapi.clone()),
             )

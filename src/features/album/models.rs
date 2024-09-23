@@ -138,22 +138,21 @@ pub struct CreateAlbumRequest {
 
 impl CreateAlbumRequest {
     pub async fn from_payload_data(payload_data: HashMap<String, Value>) -> Self {
-        let image_paths: Vec<String> = parse_string_vec(payload_data["cover"].as_array());
+        let image_paths: Vec<String> = if payload_data.contains_key("cover") { parse_string_vec(payload_data["cover"].as_array()) } else { vec![] };
         let mut cover_paths: Vec<String> = vec![];
         if payload_data.contains_key("images") && !payload_data["images"].is_null() {
             cover_paths = parse_string_vec(Some(payload_data["images"].as_array().unwrap_or(&Vec::new())));
         }
-
         CreateAlbumRequest {
             title: payload_data["title"].as_str().unwrap().to_string(),
             description: payload_data["description"].as_str().unwrap().to_string(),
             cover: image_paths.first().unwrap().to_string(),
             images: Option::from(cover_paths),
-            completed: if payload_data.contains_key("completed") { payload_data["completed"].as_bool() }else{Some(false)},
-            tags: if payload_data.contains_key("tags") {payload_data["tags"].as_str().map(|value| value.to_string())}else{Some(String::from(""))},
-            enable: if payload_data.contains_key("completed") {  payload_data["enable"].as_bool()} else { Some(true) },
-            min_age: if payload_data.contains_key("min_age") { payload_data["min_age"].as_i64().map(|value| value.try_into().unwrap()) }else{Some(0)},
-            released_at: if payload_data.contains_key("released_at") { parse_option_date_time(payload_data["released_at"].as_str())} else {None},
+            completed: if payload_data.contains_key("completed") { payload_data["completed"].as_bool() } else { Some(false) },
+            tags: if payload_data.contains_key("tags") { payload_data["tags"].as_str().map(|value| value.to_string()) } else { Some(String::from("")) },
+            enable: if payload_data.contains_key("completed") { payload_data["enable"].as_bool() } else { Some(true) },
+            min_age: if payload_data.contains_key("min_age") { payload_data["min_age"].as_i64().map(|value| value.try_into().unwrap()) } else { Some(0) },
+            released_at: if payload_data.contains_key("released_at") { parse_option_date_time(payload_data["released_at"].as_str()) } else { None },
         }
     }
 }
@@ -224,7 +223,7 @@ pub struct RemoveAlbumImagesRequest {
 
 impl AddAlbumImagesRequest {
     pub async fn from_payload_data(payload_data: HashMap<String, Value>) -> Self {
-        let mut cover_paths = if payload_data.contains_key("images") { parse_string_vec(payload_data["images"].as_array()) }else{vec![]};
+        let mut cover_paths = if payload_data.contains_key("images") { parse_string_vec(payload_data["images"].as_array()) } else { vec![] };
 
         AddAlbumImagesRequest {
             images: cover_paths
