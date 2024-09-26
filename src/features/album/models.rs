@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 
-use chrono::Utc;
 use diesel::prelude::*;
 use futures_util::StreamExt;
 use serde::{Deserialize, Serialize};
@@ -20,6 +19,7 @@ use crate::schema::albums;
     Deserialize,
     ToSchema,
     AsChangeset,
+    Identifiable,
     Clone,
     IntoParams,
     PartialEq,
@@ -41,10 +41,10 @@ pub struct Album {
     pub width: i32,
     pub height: i32,
     pub bytes: i32,
-    pub released_at: Option<String>,
-    pub broken_at: Option<String>,
-    pub created_at: Option<String>,
-    pub updated_at: Option<String>,
+    pub released_at: Option<chrono::NaiveDateTime>,
+    pub broken_at: Option<chrono::NaiveDateTime>,
+    pub created_at: Option<chrono::NaiveDateTime>,
+    pub updated_at: Option<chrono::NaiveDateTime>,
 }
 
 #[derive(
@@ -72,10 +72,10 @@ pub struct AlbumResponse {
     pub width: i32,
     pub height: i32,
     pub bytes: i32,
-    pub released_at: Option<String>,
-    pub broken_at: Option<String>,
-    pub created_at: Option<String>,
-    pub updated_at: Option<String>,
+    pub released_at: Option<chrono::NaiveDateTime>,
+    pub broken_at: Option<chrono::NaiveDateTime>,
+    pub created_at: Option<chrono::NaiveDateTime>,
+    pub updated_at: Option<chrono::NaiveDateTime>,
 }
 
 impl AlbumResponse {
@@ -133,7 +133,7 @@ pub struct CreateAlbumRequest {
     pub min_age: Option<i32>,
     /// Start released date of your album (2024-07-27T15:50:50.993251+00:00)
     #[schema(example = "2024-07-27T15:50:50.993251+00:00")]
-    pub released_at: Option<String>,
+    pub released_at: Option<chrono::NaiveDateTime>,
 }
 
 impl CreateAlbumRequest {
@@ -180,10 +180,10 @@ pub struct UpdateAlbumRequest {
     pub min_age: Option<i32>,
     /// Start released date of your album (2024-07-27T15:50:50.993251+00:00)
     #[schema(example = "2024-07-27T15:50:50.993251+00:00")]
-    pub released_at: Option<String>,
+    pub released_at: Option<chrono::NaiveDateTime>,
     /// Set empty if your album fix
     #[schema(example = "")]
-    pub broken_at: Option<String>,
+    pub broken_at: Option<chrono::NaiveDateTime>,
 }
 
 impl UpdateAlbumRequest {
@@ -280,8 +280,7 @@ pub struct NewAlbum {
     pub width: i32,
     pub height: i32,
     pub bytes: i32,
-    pub released_at: Option<String>,
-    pub created_at: Option<String>,
+    pub released_at: Option<chrono::NaiveDateTime>,
 }
 
 impl NewAlbum {
@@ -308,7 +307,6 @@ impl NewAlbum {
             height: file_metadata.image_data.unwrap_or(ImageMetadata::default()).height as i32,
             bytes: file_metadata.size as i32,
             released_at: req.released_at,
-            created_at: Option::from(Utc::now().to_rfc3339()),
         }
     }
 }

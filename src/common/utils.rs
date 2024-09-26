@@ -134,7 +134,7 @@ pub fn parse_option_vec_string(value: Option<&Vec<Value>>) -> Option<Vec<String>
     }
 }
 
-pub fn parse_option_date_time(value: Option<&str>) -> Option<String> {
+pub fn parse_option_date_time(value: Option<&str>) -> Option<chrono::NaiveDateTime> {
     if value != None && !value.unwrap_or("").trim().is_empty() {
         Option::from(value.map(|s| chrono::DateTime::parse_from_rfc3339(s).map(|dt| dt.with_timezone(&chrono::Utc)).unwrap().to_string()))
     } else {

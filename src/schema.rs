@@ -1,24 +1,14 @@
 // @generated automatically by Diesel CLI.
 
 diesel::table! {
-    albums (id) {
-        id -> Integer,
-        uuid -> Text,
-        title -> Text,
-        description -> Text,
-        completed -> Bool,
-        images -> Text,
-        tags -> Nullable<Text>,
-        enable -> Bool,
-        min_age -> Integer,
-        url -> Text,
-        content_type -> Text,
-        width -> Integer,
-        height -> Integer,
-        bytes -> Integer,
-        released_at -> Nullable<Text>,
-        broken_at -> Nullable<Text>,
-        created_at -> Nullable<Text>,
-        updated_at -> Nullable<Text>,
+    episode (id) {
+        id -> Nullable<Integer>,
+        albumId -> Integer,
+        title -> Nullable<Text>,
+        uuid -> Nullable<Text>,
+        url -> Nullable<Text>,
+        brokenAt -> Nullable<Timestamp>,
+        createdAt -> Nullable<Timestamp>,
+        updatedAt -> Nullable<Timestamp>,
     }
 }

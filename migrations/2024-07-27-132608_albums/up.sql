@@ -1,23 +1,23 @@
 -- Your SQL goes here
 
-create table if not exists albums
+CREATE TABLE IF NOT EXISTS albums
 (
-    id integer primary key autoincrement not null,
-    uuid text unique not null,
-    title text not null,
-    description text not null,
-    completed boolean not null default 0,
-    images text not null,
-    tags text,
-    enable boolean not null default 1,
-    min_age int not null default 0,
-    url text not null,
-    content_type text not null,
-    width int not null,
-    height int not null,
-    bytes int not null,
-    released_at text,
-    broken_at text,
-    created_at text,
-    updated_at text
+    id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+    uuid TEXT UNIQUE NOT NULL,
+    title TEXT NOT NULL,
+    description TEXT NOT NULL,
+    completed BOOLEAN NOT NULL DEFAULT 0,
+    images TEXT NOT NULL,
+    tags TEXT,
+    enable BOOLEAN NOT NULL DEFAULT 1,
+    min_age INTEGER NOT NULL DEFAULT 0,
+    url TEXT NOT NULL,
+    content_type TEXT NOT NULL,
+    width INTEGER NOT NULL,
+    height INTEGER NOT NULL,
+    bytes INTEGER NOT NULL,
+    released_at TIMESTAMP,
+    broken_at TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
