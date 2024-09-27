@@ -42,7 +42,7 @@ impl Service {
     pub async fn get_albums(
         pool: &DbPool,
         filter_albums: models::GetAlbumRequest,
-    ) -> Result<ResponseData<models::Album>, diesel::result::Error> {
+    ) -> Result<ResponseData<models::AlbumResponse>, diesel::result::Error> {
         Repository::get_albums(pool, filter_albums).await
     }
 
@@ -90,7 +90,7 @@ impl Service {
             new_album.height = file_meta_data.image_data.unwrap_or(ImageMetadata::default()).height as i32;
             new_album.bytes = file_meta_data.size as i32;
         }
-        new_album.updated_at = Option::from(Utc::now().to_rfc3339());
+        new_album.updated_at = Some(Utc::now().naive_utc());
         match Repository::update_album(pool, new_album.clone()).await {
             Ok(size) if size > 0 =>
                 {
@@ -144,7 +144,7 @@ impl Service {
             created_at: album.created_at,
             updated_at: album.updated_at,
         };
-        new_album.updated_at = Option::from(Utc::now().to_rfc3339());
+        new_album.updated_at = Some(Utc::now().naive_utc());
         match Repository::update_album(pool, new_album.clone()).await {
             Ok(size) if size > 0 =>
                 {
@@ -198,6 +198,7 @@ impl Service {
             created_at: album.created_at,
             updated_at: album.updated_at,
         };
+        new_album.updated_at = Some(Utc::now().naive_utc());
         match Repository::update_album(pool, new_album.clone()).await {
             Ok(size) if size > 0 =>
                 {

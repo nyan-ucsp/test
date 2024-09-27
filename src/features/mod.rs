@@ -6,13 +6,15 @@ use utoipa::{Modify, OpenApi};
 use crate::common::enums::Role;
 use crate::common::enums::Role::*;
 use crate::common::models::response_data::*;
-use crate::common::models::response_message::ResponseMessage;
+use crate::common::models::response_message::*;
 
 pub mod album;
 pub mod health_check;
+mod episode;
 
 pub fn config_routes(cfg: &mut web::ServiceConfig) {
     album::configure(cfg);
+    episode::configure(cfg);
     health_check::configure(cfg);
 }
 
@@ -29,6 +31,7 @@ struct SecurityAddon;
         album::controllers::delete_album,
         album::controllers::add_album_images,
         album::controllers::remove_album_images,
+        episode::controllers::create_episode,
         health_check::controllers::get_health,
     ),
     components(
@@ -40,13 +43,17 @@ struct SecurityAddon;
             album::models::GetAlbumRequest,
             album::models::AddAlbumImagesRequest,
             album::models::RemoveAlbumImagesRequest,
-            ResponseMessage,
-            ResponseDataAlbum
+            ResponseDataAlbum,
+            episode::models::Episode,
+            episode::models::EpisodeResponse,
+            episode::models::CreateEpisodeRequest,
+            ResponseMessage
         )
     ),
     modifiers(& SecurityAddon),
     tags(
         (name = "Album", description = "Album"),
+        (name = "Episode", description = "Episode"),
         (name = "HealthCheck", description = "Service Health Checking"),
     ),
 )]

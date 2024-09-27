@@ -2,8 +2,9 @@ use std::collections::HashMap;
 use std::io::Write;
 use std::path::Path;
 use std::{env, fs};
-
+use std::num::ParseIntError;
 use actix_multipart::Multipart;
+use chrono::{DateTime, NaiveDateTime, SecondsFormat, TimeZone, Utc};
 use futures_util::StreamExt;
 use image::GenericImageView;
 use mime_guess::from_path;
@@ -15,15 +16,15 @@ use crate::common::models::file_metadata::{FileMetadata, ImageMetadata, VideoMet
 
 pub fn save_file_to_directory(filepath: &str, bytes: &Vec<u8>) {
     create_directory_if_not_exists(filepath);
-    let mut f = std::fs::File::create(filepath).unwrap();
+    let mut f = fs::File::create(filepath).unwrap();
     f.write_all(bytes).unwrap();
 }
 pub fn create_directory_if_not_exists(path: &str) {
-    if let Some(parent) = std::path::Path::new(path).parent() {
+    if let Some(parent) = Path::new(path).parent() {
         // Check if the directory exists
         if !parent.exists() {
             // Create the directory and all necessary parent directories
-            std::fs::create_dir_all(parent).unwrap();
+            fs::create_dir_all(parent).unwrap();
         }
     }
 }
@@ -134,12 +135,13 @@ pub fn parse_option_vec_string(value: Option<&Vec<Value>>) -> Option<Vec<String>
     }
 }
 
-pub fn parse_option_date_time(value: Option<&str>) -> Option<chrono::NaiveDateTime> {
-    if value != None && !value.unwrap_or("").trim().is_empty() {
-        Option::from(value.map(|s| chrono::DateTime::parse_from_rfc3339(s).map(|dt| dt.with_timezone(&chrono::Utc)).unwrap().to_string()))
-    } else {
-        None
-    }
+pub fn parse_option_date_time(value: Option<&str>) -> Option<NaiveDateTime> {
+    // Check if the Option is Some, and if so, attempt to parse the string
+    value.and_then(|v| {
+        DateTime::parse_from_rfc3339(v)
+            .ok()
+            .map(|dt| dt.naive_utc())
+    })
 }
 pub fn parse_string_vec(value: Option<&Vec<Value>>) -> Vec<String> {
     let result: Vec<String> = value.unwrap_or(&Vec::new()).into_iter().map(|s| s.as_str().unwrap().to_string()).collect();
@@ -198,4 +200,28 @@ fn is_multi_keywords(word: &str) -> bool {
 pub fn remove_values_from_vec_string<'a>(filter_vec: &Vec<String>, original_vec: &'a mut Vec<String>) -> &'a mut Vec<String> {
     original_vec.retain(|value| !filter_vec.contains(value));
     original_vec
+}
+
+pub fn format_naive_as_utc_string(naive: Option<NaiveDateTime>) -> Option<String> {
+    if naive!=None{
+        let datetime_utc = Utc.from_utc_datetime(&naive?);
+        Some(datetime_utc.to_rfc3339_opts(SecondsFormat::Secs, true))
+    }else{
+        None
+    }
+}
+
+pub fn try_parse_i32(s: Option<&str>) -> Option<i32> {
+    if s!=None{
+        match s?.to_string().parse::<i32>(){
+            Ok(d) => {
+                Some(d)
+            }
+            Err(_) => {
+                None
+            }
+        }
+    }else{
+        None
+    }
 }

@@ -1,10 +1,11 @@
 -- Your SQL goes here
 
-CREATE TABLE IF NOT EXISTS  episode (
+CREATE TABLE IF NOT EXISTS  episodes
+(
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     album_id INTEGER NOT NULL,
-    title TEXT,
-    uuid TEXT,
+    title TEXT NOT NULL,
+    uuid TEXT NOT NULL,
     url TEXT,
     broken_at TIMESTAMP,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

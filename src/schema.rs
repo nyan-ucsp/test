@@ -1,14 +1,14 @@
 // @generated automatically by Diesel CLI.
 
 diesel::table! {
-    episode (id) {
+    episodes (id) {
         id -> Nullable<Integer>,
-        albumId -> Integer,
+        album_id -> Integer,
         title -> Nullable<Text>,
         uuid -> Nullable<Text>,
         url -> Nullable<Text>,
-        brokenAt -> Nullable<Timestamp>,
-        createdAt -> Nullable<Timestamp>,
-        updatedAt -> Nullable<Timestamp>,
+        broken_at -> Nullable<Timestamp>,
+        created_at -> Nullable<Timestamp>,
+        updated_at -> Nullable<Timestamp>,
     }
 }

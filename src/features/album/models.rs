@@ -1,14 +1,13 @@
 use std::collections::HashMap;
-
+use chrono::{NaiveDateTime};
 use diesel::prelude::*;
-use futures_util::StreamExt;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
 
 use crate::common::models::file_metadata::ImageMetadata;
-use crate::common::utils::{get_data_directory, get_file_metadata, parse_option_date_time, parse_string_vec};
+use crate::common::utils::{format_naive_as_utc_string, get_data_directory, get_file_metadata, parse_option_date_time, parse_string_vec};
 use crate::schema::albums;
 
 #[derive(
@@ -18,8 +17,8 @@ use crate::schema::albums;
     Serialize,
     Deserialize,
     ToSchema,
-    AsChangeset,
     Identifiable,
+    AsChangeset,
     Clone,
     IntoParams,
     PartialEq,
@@ -41,10 +40,10 @@ pub struct Album {
     pub width: i32,
     pub height: i32,
     pub bytes: i32,
-    pub released_at: Option<chrono::NaiveDateTime>,
-    pub broken_at: Option<chrono::NaiveDateTime>,
-    pub created_at: Option<chrono::NaiveDateTime>,
-    pub updated_at: Option<chrono::NaiveDateTime>,
+    pub released_at: Option<NaiveDateTime>,
+    pub broken_at: Option<NaiveDateTime>,
+    pub created_at: Option<NaiveDateTime>,
+    pub updated_at: Option<NaiveDateTime>,
 }
 
 #[derive(
@@ -72,10 +71,10 @@ pub struct AlbumResponse {
     pub width: i32,
     pub height: i32,
     pub bytes: i32,
-    pub released_at: Option<chrono::NaiveDateTime>,
-    pub broken_at: Option<chrono::NaiveDateTime>,
-    pub created_at: Option<chrono::NaiveDateTime>,
-    pub updated_at: Option<chrono::NaiveDateTime>,
+    pub released_at: Option<String>,
+    pub broken_at: Option<String>,
+    pub created_at: Option<String>,
+    pub updated_at: Option<String>,
 }
 
 impl AlbumResponse {
@@ -99,10 +98,10 @@ impl AlbumResponse {
             width: album.width,
             height: album.height,
             bytes: album.bytes,
-            released_at: album.released_at,
-            broken_at: album.broken_at,
-            created_at: album.created_at,
-            updated_at: album.updated_at,
+            released_at: format_naive_as_utc_string(album.released_at),
+            broken_at: format_naive_as_utc_string(album.broken_at),
+            created_at: format_naive_as_utc_string(album.created_at),
+            updated_at: format_naive_as_utc_string(album.updated_at),
         }
     }
 }
@@ -113,10 +112,10 @@ pub struct CreateAlbumRequest {
     pub title: String,
     #[schema(example = "Description")]
     pub description: String,
-    /// Album Cover **Accept Only JPG**
+    /// Album Cover
     #[schema(value_type = String, format = Binary)]
     pub cover: String,
-    /// Album Description Images **Accept Only JPG**
+    /// Album Description Images
     #[schema(value_type = Option < Vec < String >>, format = Binary)]
     pub images: Option<Vec<String>>,
     /// Completed or End album default is false
@@ -131,9 +130,8 @@ pub struct CreateAlbumRequest {
     /// Minimum age of your album default is 0
     #[schema(example = 0)]
     pub min_age: Option<i32>,
-    /// Start released date of your album (2024-07-27T15:50:50.993251+00:00)
-    #[schema(example = "2024-07-27T15:50:50.993251+00:00")]
-    pub released_at: Option<chrono::NaiveDateTime>,
+    /// Start released date of your album
+    pub released_at: Option<NaiveDateTime>,
 }
 
 impl CreateAlbumRequest {
@@ -163,7 +161,7 @@ pub struct UpdateAlbumRequest {
     pub title: String,
     #[schema(example = "Description")]
     pub description: String,
-    /// Album Default Cover **Accept Only JPG**
+    /// Album Default Cover
     #[schema(value_type = Option < String >, format = Binary)]
     pub cover: Option<String>,
     /// Completed or End album default is false
@@ -178,12 +176,10 @@ pub struct UpdateAlbumRequest {
     /// Minimum age of your album default is 0
     #[schema(example = 0)]
     pub min_age: Option<i32>,
-    /// Start released date of your album (2024-07-27T15:50:50.993251+00:00)
-    #[schema(example = "2024-07-27T15:50:50.993251+00:00")]
-    pub released_at: Option<chrono::NaiveDateTime>,
+    /// Start released date of your album
+    pub released_at: Option<NaiveDateTime>,
     /// Set empty if your album fix
-    #[schema(example = "")]
-    pub broken_at: Option<chrono::NaiveDateTime>,
+    pub broken_at: Option<NaiveDateTime>,
 }
 
 impl UpdateAlbumRequest {
@@ -209,7 +205,7 @@ impl UpdateAlbumRequest {
 
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct AddAlbumImagesRequest {
-    /// Album Images **Accept Only JPG**
+    /// Album Images
     #[schema(value_type = Vec < String >, format = Binary)]
     pub images: Vec<String>,
 }
@@ -223,7 +219,7 @@ pub struct RemoveAlbumImagesRequest {
 
 impl AddAlbumImagesRequest {
     pub async fn from_payload_data(payload_data: HashMap<String, Value>) -> Self {
-        let mut cover_paths = if payload_data.contains_key("images") { parse_string_vec(payload_data["images"].as_array()) } else { vec![] };
+        let cover_paths = if payload_data.contains_key("images") { parse_string_vec(payload_data["images"].as_array()) } else { vec![] };
 
         AddAlbumImagesRequest {
             images: cover_paths
@@ -280,7 +276,7 @@ pub struct NewAlbum {
     pub width: i32,
     pub height: i32,
     pub bytes: i32,
-    pub released_at: Option<chrono::NaiveDateTime>,
+    pub released_at: Option<NaiveDateTime>,
 }
 
 impl NewAlbum {
