@@ -1,12 +1,45 @@
 use std::collections::HashMap;
-use chrono::NaiveDateTime;
-use diesel::{AsChangeset, Identifiable, Insertable, Queryable, Selectable};
+use chrono::{NaiveDateTime};
+use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
-use crate::common::utils::{format_naive_as_utc_string, get_data_directory, parse_string_vec, try_parse_i32};
-use crate::schema::episodes;
+use crate::common::ne_parse::NEParse;
+use crate::common::utils::{get_data_directory};
+use crate::schema::{episodes, albums};
+
+#[derive(
+    Debug,
+    Queryable,
+    Selectable,
+    ToSchema,
+    Clone,
+    IntoParams,
+    PartialEq,
+    Eq
+)]
+#[diesel(table_name = albums)]
+pub struct EpisodeAlbum {
+    pub id: i32,
+    pub uuid: String,
+    pub title: String,
+    pub description: String,
+    pub completed: bool,
+    pub images: String,
+    pub tags: Option<String>,
+    pub enable: bool,
+    pub min_age: i32,
+    pub url: String,
+    pub content_type: String,
+    pub width: i32,
+    pub height: i32,
+    pub bytes: i32,
+    pub released_at: Option<NaiveDateTime>,
+    pub broken_at: Option<NaiveDateTime>,
+    pub created_at: Option<NaiveDateTime>,
+    pub updated_at: Option<NaiveDateTime>,
+}
 
 #[derive(
     Debug,
@@ -14,10 +47,10 @@ use crate::schema::episodes;
     Selectable,
     Serialize,
     Deserialize,
-    Insertable,
     ToSchema,
     Identifiable,
     AsChangeset,
+    Insertable,
     Clone,
     IntoParams,
     PartialEq,
@@ -27,16 +60,17 @@ use crate::schema::episodes;
 pub struct Episode {
     pub id: Option<i32>,
     pub album_id: i32,
-    pub title: String,
     pub uuid: String,
+    pub title: String,
     pub url: Option<String>,
     pub broken_at: Option<NaiveDateTime>,
     pub created_at: Option<NaiveDateTime>,
     pub updated_at: Option<NaiveDateTime>,
 }
 
+
 impl Episode {
-    pub fn from_create_request(req: CreateEpisodeRequest) -> Self {
+    pub fn from_create_request(req: CreateEpisodeRequest, album_uuid: String) -> Self {
         let episode_uuid = Uuid::new_v4().to_string();
         let episode_file_uuid = Uuid::new_v4().to_string();
         Episode {
@@ -44,7 +78,7 @@ impl Episode {
             album_id: req.album_id,
             title: req.title,
             uuid: episode_uuid.clone(),
-            url: if req.file.clone().is_none() { None } else { Some(format!("{}/{}/{}.{}", get_data_directory(), episode_uuid, episode_file_uuid, req.file.unwrap().split(".").last().unwrap())) },
+            url: if req.file.clone().is_none() { None } else { Some(format!("{}/{}/{}/{}.{}", get_data_directory(), album_uuid, episode_uuid, episode_file_uuid, req.file.unwrap().split(".").last().unwrap())) },
             broken_at: None,
             created_at: None,
             updated_at: None,
@@ -82,10 +116,14 @@ impl EpisodeResponse {
             title: ep.title,
             uuid: ep.uuid,
             url: ep.url,
-            broken_at: format_naive_as_utc_string(ep.broken_at),
-            created_at: format_naive_as_utc_string(ep.created_at),
-            updated_at: format_naive_as_utc_string(ep.created_at),
+            broken_at: NEParse::opt_naive_datetime_to_utc_opt_string(ep.broken_at),
+            created_at: NEParse::opt_naive_datetime_to_utc_opt_string(ep.created_at),
+            updated_at: NEParse::opt_naive_datetime_to_utc_opt_string(ep.updated_at),
         }
+    }
+
+    pub fn from_episodes(eps: Vec<Episode>) -> Vec<Self> {
+        eps.into_iter().map(|e| Self::from_episode(e)).collect()
     }
 }
 
@@ -108,15 +146,40 @@ impl CreateEpisodeRequest {
             &&
             (
                 !payload_data["title"].as_str().is_none()
-                    && !try_parse_i32(payload_data["album_id"].as_str()).is_none()
+                    && !NEParse::opt_immut_str_to_opt_i32(payload_data["album_id"].as_str()).is_none()
             )
     }
     pub async fn from_payload_data(payload_data: HashMap<String, Value>) -> Self {
-        let file_paths: Vec<String> = if payload_data.contains_key("file") { parse_string_vec(payload_data["file"].as_array()) } else { vec![] };
+        let file_paths: Vec<String> = if payload_data.contains_key("file") { NEParse::opt_immut_vec_serde_json_value_to_vec_string(payload_data["file"].as_array()) } else { vec![] };
         CreateEpisodeRequest {
-            album_id: try_parse_i32(payload_data["album_id"].as_str()).unwrap(),
+            album_id: NEParse::opt_immut_str_to_opt_i32(payload_data["album_id"].as_str()).unwrap(),
             title: payload_data["title"].as_str().unwrap().to_string(),
             file: if file_paths.is_empty() { None } else { file_paths.first().cloned() },
         }
     }
+}
+
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct UpdateEpisodeRequest {
+    #[schema(example = "Episode 1")]
+    pub title: Option<String>,
+    /// Episode File
+    #[schema(value_type = Option<String>, format = Binary)]
+    pub file: Option<String>,
+}
+
+impl UpdateEpisodeRequest {
+    pub async fn from_payload_data(payload_data: HashMap<String, Value>) -> Self {
+        let file_paths: Vec<String> = if payload_data.contains_key("file") { NEParse::opt_immut_vec_serde_json_value_to_vec_string(payload_data["file"].as_array()) } else { vec![] };
+        UpdateEpisodeRequest {
+            title: NEParse::opt_immut_str_to_option_string(payload_data["title"].as_str()),
+            file: if file_paths.is_empty() { None } else { file_paths.first().cloned() },
+        }
+    }
+}
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct FilterEpisodeRequest {
+    #[schema(example = "")]
+    pub title: String,
 }

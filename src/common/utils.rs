@@ -2,9 +2,7 @@ use std::collections::HashMap;
 use std::io::Write;
 use std::path::Path;
 use std::{env, fs};
-use std::num::ParseIntError;
 use actix_multipart::Multipart;
-use chrono::{DateTime, NaiveDateTime, SecondsFormat, TimeZone, Utc};
 use futures_util::StreamExt;
 use image::GenericImageView;
 use mime_guess::from_path;
@@ -126,29 +124,6 @@ pub async fn parse_payload_data(mut payload: Multipart) -> Result<(HashMap<Strin
     Ok((form_data_map, tmp_path))
 }
 
-pub fn parse_option_vec_string(value: Option<&Vec<Value>>) -> Option<Vec<String>> {
-    if value != None {
-        let v: Vec<String> = value.into_iter().map(|data| data.into_iter().map(|s| s.as_str().unwrap().to_string()).collect()).collect();
-        Option::from(v)
-    } else {
-        None
-    }
-}
-
-pub fn parse_option_date_time(value: Option<&str>) -> Option<NaiveDateTime> {
-    // Check if the Option is Some, and if so, attempt to parse the string
-    value.and_then(|v| {
-        DateTime::parse_from_rfc3339(v)
-            .ok()
-            .map(|dt| dt.naive_utc())
-    })
-}
-pub fn parse_string_vec(value: Option<&Vec<Value>>) -> Vec<String> {
-    let result: Vec<String> = value.unwrap_or(&Vec::new()).into_iter().map(|s| s.as_str().unwrap().to_string()).collect();
-    result
-}
-
-
 pub fn get_file_metadata(file_path: &str) -> FileMetadata {
     let metadata = fs::metadata(file_path).unwrap();
     let size = metadata.len();
@@ -202,26 +177,3 @@ pub fn remove_values_from_vec_string<'a>(filter_vec: &Vec<String>, original_vec:
     original_vec
 }
 
-pub fn format_naive_as_utc_string(naive: Option<NaiveDateTime>) -> Option<String> {
-    if naive!=None{
-        let datetime_utc = Utc.from_utc_datetime(&naive?);
-        Some(datetime_utc.to_rfc3339_opts(SecondsFormat::Secs, true))
-    }else{
-        None
-    }
-}
-
-pub fn try_parse_i32(s: Option<&str>) -> Option<i32> {
-    if s!=None{
-        match s?.to_string().parse::<i32>(){
-            Ok(d) => {
-                Some(d)
-            }
-            Err(_) => {
-                None
-            }
-        }
-    }else{
-        None
-    }
-}

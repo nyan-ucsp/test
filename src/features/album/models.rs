@@ -7,7 +7,8 @@ use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
 
 use crate::common::models::file_metadata::ImageMetadata;
-use crate::common::utils::{format_naive_as_utc_string, get_data_directory, get_file_metadata, parse_option_date_time, parse_string_vec};
+use crate::common::ne_parse::NEParse;
+use crate::common::utils::{get_data_directory, get_file_metadata};
 use crate::schema::albums;
 
 #[derive(
@@ -98,10 +99,10 @@ impl AlbumResponse {
             width: album.width,
             height: album.height,
             bytes: album.bytes,
-            released_at: format_naive_as_utc_string(album.released_at),
-            broken_at: format_naive_as_utc_string(album.broken_at),
-            created_at: format_naive_as_utc_string(album.created_at),
-            updated_at: format_naive_as_utc_string(album.updated_at),
+            released_at: NEParse::opt_naive_datetime_to_utc_opt_string(album.released_at),
+            broken_at: NEParse::opt_naive_datetime_to_utc_opt_string(album.broken_at),
+            created_at: NEParse::opt_naive_datetime_to_utc_opt_string(album.created_at),
+            updated_at: NEParse::opt_naive_datetime_to_utc_opt_string(album.updated_at),
         }
     }
 }
@@ -136,10 +137,10 @@ pub struct CreateAlbumRequest {
 
 impl CreateAlbumRequest {
     pub async fn from_payload_data(payload_data: HashMap<String, Value>) -> Self {
-        let image_paths: Vec<String> = if payload_data.contains_key("cover") { parse_string_vec(payload_data["cover"].as_array()) } else { vec![] };
+        let image_paths: Vec<String> = if payload_data.contains_key("cover") { NEParse::opt_immut_vec_serde_json_value_to_vec_string(payload_data["cover"].as_array()) } else { vec![] };
         let mut cover_paths: Vec<String> = vec![];
         if payload_data.contains_key("images") && !payload_data["images"].is_null() {
-            cover_paths = parse_string_vec(Some(payload_data["images"].as_array().unwrap_or(&Vec::new())));
+            cover_paths = NEParse::opt_immut_vec_serde_json_value_to_vec_string(Some(payload_data["images"].as_array().unwrap_or(&Vec::new())));
         }
         CreateAlbumRequest {
             title: payload_data["title"].as_str().unwrap().to_string(),
@@ -150,7 +151,7 @@ impl CreateAlbumRequest {
             tags: if payload_data.contains_key("tags") { payload_data["tags"].as_str().map(|value| value.to_string()) } else { Some(String::from("")) },
             enable: if payload_data.contains_key("completed") { payload_data["enable"].as_bool() } else { Some(true) },
             min_age: if payload_data.contains_key("min_age") { payload_data["min_age"].as_i64().map(|value| value.try_into().unwrap()) } else { Some(0) },
-            released_at: if payload_data.contains_key("released_at") { parse_option_date_time(payload_data["released_at"].as_str()) } else { None },
+            released_at: if payload_data.contains_key("released_at") { NEParse::opt_immut_str_to_opt_naive_datetime(payload_data["released_at"].as_str()) } else { None },
         }
     }
 }
@@ -197,8 +198,8 @@ impl UpdateAlbumRequest {
             tags: payload_data["tags"].as_str().map(|value| value.to_string()),
             enable: payload_data["enable"].as_bool(),
             min_age: payload_data["min_age"].as_i64().map(|value| value.try_into().unwrap()),
-            released_at: parse_option_date_time(payload_data["released_at"].as_str()),
-            broken_at: parse_option_date_time(payload_data["released_at"].as_str()),
+            released_at: NEParse::opt_immut_str_to_opt_naive_datetime(payload_data["released_at"].as_str()),
+            broken_at: NEParse::opt_immut_str_to_opt_naive_datetime(payload_data["released_at"].as_str()),
         }
     }
 }
@@ -219,7 +220,7 @@ pub struct RemoveAlbumImagesRequest {
 
 impl AddAlbumImagesRequest {
     pub async fn from_payload_data(payload_data: HashMap<String, Value>) -> Self {
-        let cover_paths = if payload_data.contains_key("images") { parse_string_vec(payload_data["images"].as_array()) } else { vec![] };
+        let cover_paths = if payload_data.contains_key("images") { NEParse::opt_immut_vec_serde_json_value_to_vec_string(payload_data["images"].as_array()) } else { vec![] };
 
         AddAlbumImagesRequest {
             images: cover_paths

@@ -4,7 +4,6 @@ use diesel::prelude::*;
 use crate::common::database::DbPool;
 use crate::common::models::response_data::ResponseData;
 use crate::features::album::models;
-use crate::features::album::models::AlbumResponse;
 use crate::schema::albums;
 
 pub struct Repository;
@@ -19,7 +18,7 @@ impl Repository {
         Ok(album)
     }
 
-    pub async fn get_albums(pool: &DbPool, filter_albums: models::GetAlbumRequest) -> Result<ResponseData<AlbumResponse>, diesel::result::Error> {
+    pub async fn get_albums(pool: &DbPool, filter_albums: models::GetAlbumRequest) -> Result<ResponseData< models::AlbumResponse>, diesel::result::Error> {
         use crate::schema::albums::*;
         let mut conn = pool.get().expect("Failed to get DB connection");
         let mut query = albums::table.into_boxed();
@@ -88,8 +87,8 @@ impl Repository {
             .load::<models::Album>(&mut conn)
             .expect("error loading albums");
 
-        let response_data = ResponseData::<AlbumResponse> {
-            data: results.into_iter().map(|r|AlbumResponse::from_album(r)).collect(),
+        let response_data = ResponseData::< models::AlbumResponse> {
+            data: results.into_iter().map(|r| models::AlbumResponse::from_album(r)).collect(),
             total,
         };
         Ok(response_data)

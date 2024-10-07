@@ -4,8 +4,8 @@ CREATE TABLE IF NOT EXISTS  episodes
 (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     album_id INTEGER NOT NULL,
+    uuid TEXT UNIQUE NOT NULL,
     title TEXT NOT NULL,
-    uuid TEXT NOT NULL,
     url TEXT,
     broken_at TIMESTAMP,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

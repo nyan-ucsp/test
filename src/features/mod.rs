@@ -10,7 +10,7 @@ use crate::common::models::response_message::*;
 
 pub mod album;
 pub mod health_check;
-mod episode;
+pub(crate) mod episode;
 
 pub fn config_routes(cfg: &mut web::ServiceConfig) {
     album::configure(cfg);
@@ -32,6 +32,8 @@ struct SecurityAddon;
         album::controllers::add_album_images,
         album::controllers::remove_album_images,
         episode::controllers::create_episode,
+        episode::controllers::delete_episode,
+        episode::controllers::get_episodes_by_album_id,
         health_check::controllers::get_health,
     ),
     components(
@@ -47,6 +49,7 @@ struct SecurityAddon;
             episode::models::Episode,
             episode::models::EpisodeResponse,
             episode::models::CreateEpisodeRequest,
+            episode::models::FilterEpisodeRequest,
             ResponseMessage
         )
     ),

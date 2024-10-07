@@ -1,3 +1,5 @@
+extern crate core;
+
 use std::env;
 
 use crate::common::middleware::response_time_middleware::ResponseTime;
