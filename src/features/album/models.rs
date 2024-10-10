@@ -1,8 +1,8 @@
-use std::collections::HashMap;
-use chrono::{NaiveDateTime};
+use chrono::NaiveDateTime;
 use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use std::collections::HashMap;
 use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
 
@@ -23,7 +23,7 @@ use crate::schema::albums;
     Clone,
     IntoParams,
     PartialEq,
-    Eq
+    Eq,
 )]
 #[diesel(table_name = albums)]
 pub struct Album {
@@ -47,16 +47,7 @@ pub struct Album {
     pub updated_at: Option<NaiveDateTime>,
 }
 
-#[derive(
-    Debug,
-    Serialize,
-    Deserialize,
-    Clone,
-    ToSchema,
-    IntoParams,
-    PartialEq,
-    Eq
-)]
+#[derive(Debug, Serialize, Deserialize, Clone, ToSchema, IntoParams, PartialEq, Eq)]
 pub struct AlbumResponse {
     pub id: i32,
     pub uuid: String,
@@ -86,7 +77,8 @@ impl AlbumResponse {
             title: album.title,
             description: album.description,
             completed: album.completed,
-            images: album.images
+            images: album
+                .images
                 .split(",")
                 .filter(|s| !s.is_empty())
                 .map(String::from)
@@ -137,21 +129,49 @@ pub struct CreateAlbumRequest {
 
 impl CreateAlbumRequest {
     pub async fn from_payload_data(payload_data: HashMap<String, Value>) -> Self {
-        let image_paths: Vec<String> = if payload_data.contains_key("cover") { NEParse::opt_immut_vec_serde_json_value_to_vec_string(payload_data["cover"].as_array()) } else { vec![] };
+        let image_paths: Vec<String> = if payload_data.contains_key("cover") {
+            NEParse::opt_immut_vec_serde_json_value_to_vec_string(payload_data["cover"].as_array())
+        } else {
+            vec![]
+        };
         let mut cover_paths: Vec<String> = vec![];
         if payload_data.contains_key("images") && !payload_data["images"].is_null() {
-            cover_paths = NEParse::opt_immut_vec_serde_json_value_to_vec_string(Some(payload_data["images"].as_array().unwrap_or(&Vec::new())));
+            cover_paths = NEParse::opt_immut_vec_serde_json_value_to_vec_string(Some(
+                payload_data["images"].as_array().unwrap_or(&Vec::new()),
+            ));
         }
         CreateAlbumRequest {
             title: payload_data["title"].as_str().unwrap().to_string(),
             description: payload_data["description"].as_str().unwrap().to_string(),
             cover: image_paths.first().unwrap().to_string(),
             images: Option::from(cover_paths),
-            completed: if payload_data.contains_key("completed") { payload_data["completed"].as_bool() } else { Some(false) },
-            tags: if payload_data.contains_key("tags") { payload_data["tags"].as_str().map(|value| value.to_string()) } else { Some(String::from("")) },
-            enable: if payload_data.contains_key("completed") { payload_data["enable"].as_bool() } else { Some(true) },
-            min_age: if payload_data.contains_key("min_age") { payload_data["min_age"].as_i64().map(|value| value.try_into().unwrap()) } else { Some(0) },
-            released_at: if payload_data.contains_key("released_at") { NEParse::opt_immut_str_to_opt_naive_datetime(payload_data["released_at"].as_str()) } else { None },
+            completed: if payload_data.contains_key("completed") {
+                payload_data["completed"].as_bool()
+            } else {
+                Some(false)
+            },
+            tags: if payload_data.contains_key("tags") {
+                payload_data["tags"].as_str().map(|value| value.to_string())
+            } else {
+                Some(String::from(""))
+            },
+            enable: if payload_data.contains_key("completed") {
+                payload_data["enable"].as_bool()
+            } else {
+                Some(true)
+            },
+            min_age: if payload_data.contains_key("min_age") {
+                payload_data["min_age"]
+                    .as_i64()
+                    .map(|value| value.try_into().unwrap())
+            } else {
+                Some(0)
+            },
+            released_at: if payload_data.contains_key("released_at") {
+                NEParse::opt_immut_str_to_opt_naive_datetime(payload_data["released_at"].as_str())
+            } else {
+                None
+            },
         }
     }
 }
@@ -187,19 +207,34 @@ impl UpdateAlbumRequest {
     pub async fn from_payload_data(payload_data: HashMap<String, Value>) -> Self {
         let mut image_paths: Vec<String> = vec![];
         if !payload_data["cover"].is_null() {
-            image_paths = payload_data["cover"].as_array().unwrap_or(&Vec::new()).into_iter().map(|s| s.as_str().unwrap().to_string()).collect();
+            image_paths = payload_data["cover"]
+                .as_array()
+                .unwrap_or(&Vec::new())
+                .into_iter()
+                .map(|s| s.as_str().unwrap().to_string())
+                .collect();
         }
 
         UpdateAlbumRequest {
             title: payload_data["title"].as_str().unwrap().to_string(),
             description: payload_data["description"].as_str().unwrap().to_string(),
-            cover: if image_paths.is_empty() { None } else { Some(image_paths.first().unwrap().to_string()) },
+            cover: if image_paths.is_empty() {
+                None
+            } else {
+                Some(image_paths.first().unwrap().to_string())
+            },
             completed: payload_data["completed"].as_bool(),
             tags: payload_data["tags"].as_str().map(|value| value.to_string()),
             enable: payload_data["enable"].as_bool(),
-            min_age: payload_data["min_age"].as_i64().map(|value| value.try_into().unwrap()),
-            released_at: NEParse::opt_immut_str_to_opt_naive_datetime(payload_data["released_at"].as_str()),
-            broken_at: NEParse::opt_immut_str_to_opt_naive_datetime(payload_data["released_at"].as_str()),
+            min_age: payload_data["min_age"]
+                .as_i64()
+                .map(|value| value.try_into().unwrap()),
+            released_at: NEParse::opt_immut_str_to_opt_naive_datetime(
+                payload_data["released_at"].as_str(),
+            ),
+            broken_at: NEParse::opt_immut_str_to_opt_naive_datetime(
+                payload_data["released_at"].as_str(),
+            ),
         }
     }
 }
@@ -217,13 +252,16 @@ pub struct RemoveAlbumImagesRequest {
     pub images: Vec<String>,
 }
 
-
 impl AddAlbumImagesRequest {
     pub async fn from_payload_data(payload_data: HashMap<String, Value>) -> Self {
-        let cover_paths = if payload_data.contains_key("images") { NEParse::opt_immut_vec_serde_json_value_to_vec_string(payload_data["images"].as_array()) } else { vec![] };
+        let cover_paths = if payload_data.contains_key("images") {
+            NEParse::opt_immut_vec_serde_json_value_to_vec_string(payload_data["images"].as_array())
+        } else {
+            vec![]
+        };
 
         AddAlbumImagesRequest {
-            images: cover_paths
+            images: cover_paths,
         }
     }
 }
@@ -286,8 +324,27 @@ impl NewAlbum {
         let image_uuid = Uuid::new_v4().to_string();
         let file_metadata = get_file_metadata(&req.cover);
         let format = file_metadata.original_name.split(".").last().unwrap();
-        let url = format!("{}/{}/{}.{}", get_data_directory(), album_uuid, image_uuid, format);
-        let images: Vec<String> = req.images.unwrap_or(vec![]).into_iter().map(|s| format!("{}/{}/{}.{}", get_data_directory(), album_uuid, Uuid::new_v4().to_string(), s.split(".").last().unwrap())).collect();
+        let url = format!(
+            "{}/{}/{}.{}",
+            get_data_directory(),
+            album_uuid,
+            image_uuid,
+            format
+        );
+        let images: Vec<String> = req
+            .images
+            .unwrap_or(vec![])
+            .into_iter()
+            .map(|s| {
+                format!(
+                    "{}/{}/{}.{}",
+                    get_data_directory(),
+                    album_uuid,
+                    Uuid::new_v4().to_string(),
+                    s.split(".").last().unwrap()
+                )
+            })
+            .collect();
 
         NewAlbum {
             uuid: album_uuid,
@@ -300,8 +357,15 @@ impl NewAlbum {
             min_age: req.min_age.unwrap_or(0),
             url,
             content_type: file_metadata.content_type,
-            width: file_metadata.image_data.clone().unwrap_or(ImageMetadata::default()).width as i32,
-            height: file_metadata.image_data.unwrap_or(ImageMetadata::default()).height as i32,
+            width: file_metadata
+                .image_data
+                .clone()
+                .unwrap_or(ImageMetadata::default())
+                .width as i32,
+            height: file_metadata
+                .image_data
+                .unwrap_or(ImageMetadata::default())
+                .height as i32,
             bytes: file_metadata.size as i32,
             released_at: req.released_at,
         }

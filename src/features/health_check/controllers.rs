@@ -15,5 +15,7 @@ use crate::common::models::response_message::ResponseMessage;
 )]
 #[get("/health")]
 pub async fn get_health() -> impl Responder {
-    HttpResponse::Ok().json(ResponseMessage { message: String::from("Service is running") })
+    HttpResponse::Ok().json(ResponseMessage {
+        message: String::from("Service is running"),
+    })
 }

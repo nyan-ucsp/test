@@ -1,11 +1,13 @@
-use chrono::Utc;
-use uuid::Uuid;
 use crate::common::database::DbPool;
-use crate::common::models::file_metadata::ImageMetadata;
 use crate::common::models::response_data::ResponseData;
-use crate::common::utils::{delete_directory_if_exists, delete_file_if_exists, get_data_directory, get_file_metadata, get_project_directory, move_file_and_replace};
+use crate::common::utils::{
+    delete_directory_if_exists, delete_file_if_exists, get_data_directory, get_project_directory,
+    move_file_and_replace,
+};
 use crate::features::episode::models;
 use crate::features::episode::repository::*;
+use chrono::Utc;
+use uuid::Uuid;
 
 pub struct Service;
 impl Service {
@@ -22,7 +24,11 @@ impl Service {
                     Ok(episode) => {
                         let response = models::EpisodeResponse::from_episode(episode);
                         if !response.url.is_none() {
-                            let des_file_path = format!("{}/{}", get_project_directory(), response.url.clone().unwrap());
+                            let des_file_path = format!(
+                                "{}/{}",
+                                get_project_directory(),
+                                response.url.clone().unwrap()
+                            );
                             move_file_and_replace(data.unwrap().as_str(), &*des_file_path);
                             Ok(response)
                         } else {
@@ -64,64 +70,81 @@ impl Service {
     ) -> Result<usize, diesel::result::Error> {
         match Repository::get_album_uuid_by_episode_uuid(pool, episode_uuid.clone()).await {
             Ok(album_uuid) => {
-                let filepath = format!("{}/{}/{}", get_data_directory(), album_uuid, episode_uuid, );
+                let filepath = format!("{}/{}/{}", get_data_directory(), album_uuid, episode_uuid,);
                 delete_directory_if_exists(&filepath);
                 Repository::delete_episode(pool, episode_uuid).await
             }
             Err(e) => Err(e),
         }
     }
-
-
     pub async fn update_episode(
         pool: &DbPool,
         episode_uuid: String,
         update_episode: models::UpdateEpisodeRequest,
     ) -> Result<models::EpisodeResponse, &str> {
-        let episode = Repository::get_episode_by_episode_uuid(pool, episode_uuid.clone()).await.expect("Episode not found");
-        let album_uuid = Repository::get_album_uuid_by_episode_uuid(pool, episode_uuid.clone()).await.expect("Album uuid not found");
-        let old_url = episode.url.clone();
-        let mut new_episode = models::Episode {
-            id: episode.id,
-            album_id: episode.album_id,
-            uuid: episode.uuid,
-            title: update_episode.title.unwrap_or(episode.title),
-            url: None,
-            broken_at: episode.broken_at,
-            created_at: episode.created_at,
-            updated_at: episode.updated_at,
-        };
-        if let Some(src_path) = update_episode.file.clone() {
-            let new_uuid = Uuid::new_v4().to_string();
-            let format = src_path.split(".").last().unwrap();
-            let new_url = format!("{}/{}/{}/{}.{}", get_data_directory(), album_uuid, episode_uuid, new_uuid, format);
-            new_episode.url = Some(new_url);
-        }
-        new_episode.updated_at = Some(Utc::now().naive_utc());
-        match Repository::update_episode(pool, new_episode.clone()).await {
-            Ok(size) if size > 0 =>
-                {
-                    if old_url.is_none() || new_episode.url != old_url {
-                        if !old_url.is_none() {
-                            let old_file_path = format!("{}/{}", get_project_directory(), old_url.unwrap());
-                            //Delete old file
-                            delete_file_if_exists(&old_file_path);
+        match Repository::get_episode_by_episode_uuid(pool, episode_uuid.clone()).await {
+            Ok(episode) => {
+                match Repository::get_album_uuid_by_episode_uuid(pool, episode_uuid.clone()).await {
+                    Ok(album_uuid) => {
+                        let old_url = episode.url.clone();
+                        let mut new_episode = models::Episode {
+                            id: episode.id,
+                            album_id: episode.album_id,
+                            uuid: episode.uuid,
+                            title: update_episode.title.unwrap_or(episode.title),
+                            url: episode.url,
+                            broken_at: episode.broken_at,
+                            created_at: episode.created_at,
+                            updated_at: episode.updated_at,
+                        };
+                        if let Some(src_path) = update_episode.file.clone() {
+                            let new_uuid = Uuid::new_v4().to_string();
+                            let format = src_path.split(".").last().unwrap();
+                            let new_url = format!(
+                                "{}/{}/{}/{}.{}",
+                                get_data_directory(),
+                                album_uuid,
+                                episode_uuid,
+                                new_uuid,
+                                format
+                            );
+                            new_episode.url = Some(new_url);
                         }
-                        if let (Some(src_file_path),Some(new_ep_url)) = (update_episode.file,new_episode.url.clone()) {
-                            //Move new data
-                            let des_file_path = format!("{}/{}", get_project_directory(), new_ep_url);
-                            move_file_and_replace(&src_file_path, &des_file_path);
+                        new_episode.updated_at = Some(Utc::now().naive_utc());
+                        match Repository::update_episode(pool, new_episode.clone()).await {
+                            Ok(size) if size > 0 => {
+                                if old_url != new_episode.url {
+                                    if !old_url.is_none() {
+                                        let old_file_path = format!(
+                                            "{}/{}",
+                                            get_project_directory(),
+                                            old_url.unwrap()
+                                        );
+                                        //Delete old file
+                                        delete_file_if_exists(&old_file_path);
+                                    }
+                                    if let (Some(src_file_path), Some(new_ep_url)) =
+                                        (update_episode.file, new_episode.url.clone())
+                                    {
+                                        //Move new data
+                                        let des_file_path =
+                                            format!("{}/{}", get_project_directory(), new_ep_url);
+                                        move_file_and_replace(&src_file_path, &des_file_path);
+                                    }
+                                }
+                                Ok(models::EpisodeResponse::from_episode(new_episode))
+                            }
+                            Ok(_) => Err("Album not found"),
+                            Err(e) => {
+                                eprintln!("Error: {e}");
+                                Err("Failed to update album")
+                            }
                         }
                     }
-                    Ok(models::EpisodeResponse::from_episode(new_episode))
+                    Err(_) => Err("Album UUID not found"),
                 }
-            Ok(_) => {
-                Err("Album not found")
             }
-            Err(e) => {
-                eprintln!("Error: {e}");
-                Err("Failed to update album")
-            }
+            Err(_) => Err("Episode not found"),
         }
     }
 }

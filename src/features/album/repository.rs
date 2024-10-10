@@ -9,16 +9,23 @@ use crate::schema::albums;
 pub struct Repository;
 
 impl Repository {
-    pub async fn create_album(pool: &DbPool, new_album: models::NewAlbum) -> Result<models::Album, diesel::result::Error> {
+    pub async fn create_album(
+        pool: &DbPool,
+        new_album: models::NewAlbum,
+    ) -> Result<models::Album, diesel::result::Error> {
         let mut conn = pool.get().expect("Failed to get DB connection");
         diesel::insert_into(albums::table)
             .values(&new_album)
-            .execute(&mut conn).expect("Failed to create album");
+            .execute(&mut conn)
+            .expect("Failed to create album");
         let album = albums::table.order(albums::id.desc()).first(&mut conn)?;
         Ok(album)
     }
 
-    pub async fn get_albums(pool: &DbPool, filter_albums: models::GetAlbumRequest) -> Result<ResponseData< models::AlbumResponse>, diesel::result::Error> {
+    pub async fn get_albums(
+        pool: &DbPool,
+        filter_albums: models::GetAlbumRequest,
+    ) -> Result<ResponseData<models::AlbumResponse>, diesel::result::Error> {
         use crate::schema::albums::*;
         let mut conn = pool.get().expect("Failed to get DB connection");
         let mut query = albums::table.into_boxed();
@@ -77,9 +84,10 @@ impl Repository {
             count_query = count_query.filter(min_age.eq(_min_age));
         }
 
-
         let total = count_query
-            .select(count_star()).first::<i64>(&mut conn).expect("failed to get total");
+            .select(count_star())
+            .first::<i64>(&mut conn)
+            .expect("failed to get total");
 
         let results = query
             .offset(filter_albums.offset.unwrap_or(0))
@@ -87,14 +95,20 @@ impl Repository {
             .load::<models::Album>(&mut conn)
             .expect("error loading albums");
 
-        let response_data = ResponseData::< models::AlbumResponse> {
-            data: results.into_iter().map(|r| models::AlbumResponse::from_album(r)).collect(),
+        let response_data = ResponseData::<models::AlbumResponse> {
+            data: results
+                .into_iter()
+                .map(|r| models::AlbumResponse::from_album(r))
+                .collect(),
             total,
         };
         Ok(response_data)
     }
 
-    pub async fn get_album_by_uuid(pool: &DbPool, album_uuid: String) -> Result<models::Album, diesel::result::Error> {
+    pub async fn get_album_by_uuid(
+        pool: &DbPool,
+        album_uuid: String,
+    ) -> Result<models::Album, diesel::result::Error> {
         use crate::schema::albums::uuid;
         let mut conn = pool.get().expect("Failed to get DB connection");
         let mut query = albums::table.into_boxed();
@@ -104,17 +118,24 @@ impl Repository {
         Ok(result)
     }
 
-    pub async fn update_album(pool: &DbPool, update_album: models::Album) -> Result<usize, diesel::result::Error> {
+    pub async fn update_album(
+        pool: &DbPool,
+        update_album: models::Album,
+    ) -> Result<usize, diesel::result::Error> {
         use crate::schema::albums::uuid;
 
         let mut conn = pool.get().expect("Failed to get DB connection");
 
-        let result = diesel::update(albums::table.filter(uuid.eq(update_album.uuid.clone()))).set(&update_album)
+        let result = diesel::update(albums::table.filter(uuid.eq(update_album.uuid.clone())))
+            .set(&update_album)
             .execute(&mut conn)?;
         Ok(result)
     }
 
-    pub async fn delete_album(pool: &DbPool, album_uuid: String) -> Result<usize, diesel::result::Error> {
+    pub async fn delete_album(
+        pool: &DbPool,
+        album_uuid: String,
+    ) -> Result<usize, diesel::result::Error> {
         use crate::schema::albums::dsl::*;
         let mut conn = pool.get().expect("Failed to get DB connection");
 

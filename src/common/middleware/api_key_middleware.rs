@@ -1,8 +1,8 @@
 use std::rc::Rc;
 
-use actix_web::{Error, HttpMessage};
 use actix_web::dev::{Service, ServiceRequest, ServiceResponse, Transform};
-use futures_util::future::{LocalBoxFuture, ok, Ready};
+use actix_web::{Error, HttpMessage};
+use futures_util::future::{ok, LocalBoxFuture, Ready};
 use serde_json::json;
 
 use crate::common::models::response_message::ResponseMessage;
@@ -15,13 +15,17 @@ pub struct ApiKeyMiddleware {
 
 impl ApiKeyMiddleware {
     pub fn new(admin_key: String, user_key: String, public_routes: Vec<String>) -> Self {
-        Self { admin_key, user_key, public_routes }
+        Self {
+            admin_key,
+            user_key,
+            public_routes,
+        }
     }
 }
 
 impl<S, B> Transform<S, ServiceRequest> for ApiKeyMiddleware
 where
-    S: Service<ServiceRequest, Response=ServiceResponse<B>, Error=Error> + 'static,
+    S: Service<ServiceRequest, Response = ServiceResponse<B>, Error = Error> + 'static,
     S::Future: 'static,
 {
     type Response = ServiceResponse<B>;
@@ -49,7 +53,7 @@ pub struct ApiKeyMiddlewareService<S> {
 
 impl<S, B> Service<ServiceRequest> for ApiKeyMiddlewareService<S>
 where
-    S: Service<ServiceRequest, Response=ServiceResponse<B>, Error=Error> + 'static,
+    S: Service<ServiceRequest, Response = ServiceResponse<B>, Error = Error> + 'static,
     S::Future: 'static,
 {
     type Response = ServiceResponse<B>;
@@ -78,7 +82,10 @@ where
             }
         }
 
-        if req.path().starts_with("/swagger") || req.path().starts_with("/api-docs") || req.path().starts_with("/static") {
+        if req.path().starts_with("/swagger")
+            || req.path().starts_with("/api-docs")
+            || req.path().starts_with("/static")
+        {
             let fut = self.service.call(req);
             return Box::pin(async move {
                 let res = fut.await?;
@@ -103,7 +110,11 @@ where
             })
         } else {
             Box::pin(async {
-                Err(actix_web::error::ErrorUnauthorized(json!(ResponseMessage{message:String::from("Unauthorized")})))
+                Err(actix_web::error::ErrorUnauthorized(json!(
+                    ResponseMessage {
+                        message: String::from("Unauthorized")
+                    }
+                )))
             })
         }
     }

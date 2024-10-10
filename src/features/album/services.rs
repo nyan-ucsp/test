@@ -4,7 +4,10 @@ use uuid::Uuid;
 use crate::common::database::DbPool;
 use crate::common::models::file_metadata::ImageMetadata;
 use crate::common::models::response_data::ResponseData;
-use crate::common::utils::{delete_directory_if_exists, delete_file_if_exists, get_data_directory, get_file_metadata, get_project_directory, move_file_and_replace, remove_values_from_vec_string};
+use crate::common::utils::{
+    delete_directory_if_exists, delete_file_if_exists, get_data_directory, get_file_metadata,
+    get_project_directory, move_file_and_replace, remove_values_from_vec_string,
+};
 use crate::features::album::models;
 use crate::features::album::repository::Repository;
 
@@ -25,7 +28,11 @@ impl Service {
                 if response.images.len() == image_src_files_paths.len() {
                     move_file_and_replace(&*cover_src_file_path, &*cover_des_file_path);
                     for i in 0..image_src_files_paths.len() {
-                        move_file_and_replace(image_src_files_paths[i].as_str(), format!("{}/{}", get_project_directory(), response.images[i].clone()).as_str())
+                        move_file_and_replace(
+                            image_src_files_paths[i].as_str(),
+                            format!("{}/{}", get_project_directory(), response.images[i].clone())
+                                .as_str(),
+                        )
                     }
                     Ok(response)
                 } else {
@@ -58,7 +65,9 @@ impl Service {
         album_uuid: String,
         update_album: models::UpdateAlbumRequest,
     ) -> Result<models::AlbumResponse, &str> {
-        let album = Repository::get_album_by_uuid(pool, album_uuid).await.expect("Album not found");
+        let album = Repository::get_album_by_uuid(pool, album_uuid)
+            .await
+            .expect("Album not found");
         let old_url = album.url.clone();
         let mut new_album = models::Album {
             id: album.id,
@@ -86,28 +95,32 @@ impl Service {
             let format = file_meta_data.original_name.split(".").last().unwrap();
             let new_url = format!("{}/{}/{}.{}", get_data_directory(), album.uuid, key, format);
             new_album.url = new_url;
-            new_album.width = file_meta_data.image_data.clone().unwrap_or(ImageMetadata::default()).width as i32;
-            new_album.height = file_meta_data.image_data.unwrap_or(ImageMetadata::default()).height as i32;
+            new_album.width = file_meta_data
+                .image_data
+                .clone()
+                .unwrap_or(ImageMetadata::default())
+                .width as i32;
+            new_album.height = file_meta_data
+                .image_data
+                .unwrap_or(ImageMetadata::default())
+                .height as i32;
             new_album.bytes = file_meta_data.size as i32;
         }
         new_album.updated_at = Some(Utc::now().naive_utc());
         match Repository::update_album(pool, new_album.clone()).await {
-            Ok(size) if size > 0 =>
-                {
-                    if new_album.url != old_url {
-                        let old_file_path = format!("{}/{}", get_project_directory(), old_url);
-                        //Delete old file
-                        delete_file_if_exists(&old_file_path);
-                        //Move new data
-                        let src_file_path = update_album.cover.unwrap();
-                        let des_file_path = format!("{}/{}", get_project_directory(), new_album.url);
-                        move_file_and_replace(&src_file_path, &des_file_path);
-                    }
-                    Ok(models::AlbumResponse::from_album(new_album))
+            Ok(size) if size > 0 => {
+                if new_album.url != old_url {
+                    let old_file_path = format!("{}/{}", get_project_directory(), old_url);
+                    //Delete old file
+                    delete_file_if_exists(&old_file_path);
+                    //Move new data
+                    let src_file_path = update_album.cover.unwrap();
+                    let des_file_path = format!("{}/{}", get_project_directory(), new_album.url);
+                    move_file_and_replace(&src_file_path, &des_file_path);
                 }
-            Ok(_) => {
-                Err("Album not found")
+                Ok(models::AlbumResponse::from_album(new_album))
             }
+            Ok(_) => Err("Album not found"),
             Err(e) => {
                 eprintln!("Error: {e}");
                 Err("Failed to update album")
@@ -115,22 +128,40 @@ impl Service {
         }
     }
 
-
     pub async fn add_album_images(
         pool: &DbPool,
         album_uuid: String,
         req: models::AddAlbumImagesRequest,
     ) -> Result<models::AlbumResponse, &str> {
-        let mut new_images: Vec<String> = req.images.clone().into_iter().map(|s| format!("{}/{}/{}.{}", get_data_directory(), album_uuid, Uuid::new_v4().to_string(), s.split(".").last().unwrap())).collect();
+        let mut new_images: Vec<String> = req
+            .images
+            .clone()
+            .into_iter()
+            .map(|s| {
+                format!(
+                    "{}/{}/{}.{}",
+                    get_data_directory(),
+                    album_uuid,
+                    Uuid::new_v4().to_string(),
+                    s.split(".").last().unwrap()
+                )
+            })
+            .collect();
         new_images.retain(|s| !s.trim().is_empty());
-        let album = Repository::get_album_by_uuid(pool, album_uuid).await.expect("Album not found");
+        let album = Repository::get_album_by_uuid(pool, album_uuid)
+            .await
+            .expect("Album not found");
         let mut new_album = models::Album {
             id: album.id,
             uuid: album.uuid.clone(),
             title: album.title,
             description: album.description,
             completed: album.completed,
-            images: if new_images.is_empty() { album.images } else { format!("{},{}", album.images, new_images.join(",")) },
+            images: if new_images.is_empty() {
+                album.images
+            } else {
+                format!("{},{}", album.images, new_images.join(","))
+            },
             tags: album.tags,
             enable: album.enable,
             min_age: album.min_age,
@@ -146,20 +177,21 @@ impl Service {
         };
         new_album.updated_at = Some(Utc::now().naive_utc());
         match Repository::update_album(pool, new_album.clone()).await {
-            Ok(size) if size > 0 =>
-                {
-                    if new_images.len() == req.images.len() {
-                        for i in 0..req.images.len() {
-                            move_file_and_replace(req.images[i].as_str(), format!("{}/{}", get_project_directory(), new_images[i].clone()).as_str())
-                        }
-                        Ok(models::AlbumResponse::from_album(new_album.clone()))
-                    } else {
-                        Err("Some files lost on data exchanging")
+            Ok(size) if size > 0 => {
+                if new_images.len() == req.images.len() {
+                    for i in 0..req.images.len() {
+                        move_file_and_replace(
+                            req.images[i].as_str(),
+                            format!("{}/{}", get_project_directory(), new_images[i].clone())
+                                .as_str(),
+                        )
                     }
+                    Ok(models::AlbumResponse::from_album(new_album.clone()))
+                } else {
+                    Err("Some files lost on data exchanging")
                 }
-            Ok(_) => {
-                Err("Album not found")
             }
+            Ok(_) => Err("Album not found"),
             Err(e) => {
                 eprintln!("Error: {e}");
                 Err("Failed to add album covers")
@@ -172,8 +204,14 @@ impl Service {
         album_uuid: String,
         req: models::RemoveAlbumImagesRequest,
     ) -> Result<models::AlbumResponse, &str> {
-        let album = Repository::get_album_by_uuid(pool, album_uuid).await.expect("Album not found");
-        let old_album_images: Vec<String> = album.images.split(',').map(|cover| cover.to_string()).collect();
+        let album = Repository::get_album_by_uuid(pool, album_uuid)
+            .await
+            .expect("Album not found");
+        let old_album_images: Vec<String> = album
+            .images
+            .split(',')
+            .map(|cover| cover.to_string())
+            .collect();
         let album_images: &mut Vec<String> = &mut old_album_images.clone();
         remove_values_from_vec_string(&req.images.clone(), album_images);
         album_images.retain(|s| !s.trim().is_empty());
@@ -200,16 +238,13 @@ impl Service {
         };
         new_album.updated_at = Some(Utc::now().naive_utc());
         match Repository::update_album(pool, new_album.clone()).await {
-            Ok(size) if size > 0 =>
-                {
-                    for i in req.images {
-                        delete_file_if_exists(i.as_str());
-                    }
-                    Ok(models::AlbumResponse::from_album(new_album.clone()))
+            Ok(size) if size > 0 => {
+                for i in req.images {
+                    delete_file_if_exists(i.as_str());
                 }
-            Ok(_) => {
-                Err("Album not found")
+                Ok(models::AlbumResponse::from_album(new_album.clone()))
             }
+            Ok(_) => Err("Album not found"),
             Err(e) => {
                 eprintln!("Error: {e}");
                 Err("Failed to remove album covers")
@@ -221,7 +256,7 @@ impl Service {
         pool: &DbPool,
         album_uuid: String,
     ) -> Result<usize, diesel::result::Error> {
-        let filepath = format!("{}/{}", get_data_directory(), album_uuid, );
+        let filepath = format!("{}/{}", get_data_directory(), album_uuid,);
         delete_directory_if_exists(&filepath);
         Repository::delete_album(pool, album_uuid).await
     }

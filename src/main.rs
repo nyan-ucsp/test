@@ -6,14 +6,14 @@ use crate::common::middleware::response_time_middleware::ResponseTime;
 use actix_cors::Cors;
 use actix_files::Files;
 use actix_web::{middleware::Logger, web, App, HttpServer};
+use actix_web_lab::middleware::CatchPanic;
 use dotenvy::dotenv;
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
-use actix_web_lab::middleware::CatchPanic;
 
 mod common;
-mod schema;
 mod features;
+mod schema;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -42,7 +42,13 @@ async fn main() -> std::io::Result<()> {
 
         App::new()
             .wrap(ResponseTime)
-            .wrap(common::middleware::api_key_middleware::ApiKeyMiddleware::new(admin_key.clone(), user_key.clone(), public_routes.clone()))
+            .wrap(
+                common::middleware::api_key_middleware::ApiKeyMiddleware::new(
+                    admin_key.clone(),
+                    user_key.clone(),
+                    public_routes.clone(),
+                ),
+            )
             .wrap(cors)
             .app_data(web::Data::new(connection.clone()))
             .configure(features::config_routes)
@@ -53,7 +59,7 @@ async fn main() -> std::io::Result<()> {
             )
             .service(Files::new("/static", "."))
     })
-        .bind(("127.0.0.1", 8010))?
-        .run()
-        .await
+    .bind(("127.0.0.1", 8010))?
+    .run()
+    .await
 }

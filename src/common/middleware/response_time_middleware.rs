@@ -1,5 +1,8 @@
 use actix_web::http::header::{HeaderName, HeaderValue};
-use actix_web::{dev::{Service, ServiceRequest, ServiceResponse, Transform}, Error};
+use actix_web::{
+    dev::{Service, ServiceRequest, ServiceResponse, Transform},
+    Error,
+};
 use futures::future::{ok, Ready};
 use std::pin::Pin;
 use std::rc::Rc;
@@ -10,7 +13,7 @@ pub struct ResponseTime;
 
 impl<S, B> Transform<S, ServiceRequest> for ResponseTime
 where
-    S: Service<ServiceRequest, Response=ServiceResponse<B>, Error=Error> + 'static,
+    S: Service<ServiceRequest, Response = ServiceResponse<B>, Error = Error> + 'static,
     S::Future: 'static,
     B: 'static,
 {
@@ -37,12 +40,12 @@ where
 
 impl<S, B> Service<ServiceRequest> for ResponseTimeMiddleware<S>
 where
-    S: Service<ServiceRequest, Response=ServiceResponse<B>, Error=Error> + 'static,
+    S: Service<ServiceRequest, Response = ServiceResponse<B>, Error = Error> + 'static,
     B: 'static,
 {
     type Response = ServiceResponse<B>;
     type Error = Error;
-    type Future = Pin<Box<dyn futures::Future<Output=Result<Self::Response, Self::Error>>>>;
+    type Future = Pin<Box<dyn futures::Future<Output = Result<Self::Response, Self::Error>>>>;
 
     fn poll_ready(&self, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
         self.service.poll_ready(cx)

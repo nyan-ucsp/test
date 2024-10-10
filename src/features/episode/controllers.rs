@@ -1,12 +1,13 @@
-use actix_multipart::Multipart;
-use actix_web::{delete, post, web, HttpRequest, HttpResponse, Responder};
 use crate::common::database::DbPool;
 use crate::common::enums::Role::Admin;
 use crate::common::models::response_message::ResponseMessage;
 use crate::common::utils::{delete_directory_if_exists, parse_payload_data};
-use crate::features::episode::models;
 use crate::features::check_role;
+use crate::features::episode::models;
+use crate::features::episode::models::UpdateEpisodeRequest;
 use crate::features::episode::services::Service;
+use actix_multipart::Multipart;
+use actix_web::{delete, post, put, web, HttpRequest, HttpResponse, Responder};
 
 /// Create Episode
 ///
@@ -39,9 +40,11 @@ pub async fn create_episode(
     if check_role(http_request) == Admin {
         match parse_payload_data(payload).await {
             Ok((payload_data, tmp_path)) => {
-                let check_required_fields = models::CreateEpisodeRequest::check_required_data(payload_data.clone()).await;
+                let check_required_fields =
+                    models::CreateEpisodeRequest::check_required_data(payload_data.clone()).await;
                 if check_required_fields {
-                    let req_data = models::CreateEpisodeRequest::from_payload_data(payload_data).await;
+                    let req_data =
+                        models::CreateEpisodeRequest::from_payload_data(payload_data).await;
                     match Service::create_episode(&pool, req_data).await {
                         Ok(new_episode) => {
                             delete_directory_if_exists(&tmp_path);
@@ -70,7 +73,6 @@ pub async fn create_episode(
         })
     }
 }
-
 
 /// Get Episodes By Album Id
 ///
@@ -109,11 +111,9 @@ pub async fn get_episodes_by_album_id(
                     }),
                 }
             }
-            Err(_) => {
-                HttpResponse::BadRequest().json(ResponseMessage {
-                    message: String::from("Invalid album ID"),
-                })
-            }
+            Err(_) => HttpResponse::BadRequest().json(ResponseMessage {
+                message: String::from("Invalid album ID"),
+            }),
         }
     } else {
         HttpResponse::Unauthorized().json(ResponseMessage {
@@ -122,6 +122,64 @@ pub async fn get_episodes_by_album_id(
     }
 }
 
+/// Update Episode
+///
+/// Update episode
+#[utoipa::path(
+    put,
+    path = "/episodes/{episode_uuid}",
+    request_body(
+        content = UpdateEpisodeRequest,
+        description = "Update Episode",
+        content_type = "multipart/form-data",
+    ),
+    responses(
+        (status = 200, description = "Update successfully", body = EpisodeResponse),
+        (status = 400, description = "Update failed", body = ResponseMessage),
+        (status = 401, description = "Unauthorized error", body = ResponseMessage),
+        (status = 500, description = "Internal server error", body = ResponseMessage)
+    ),
+    security(
+        ("api_key" = [])
+    ),
+    tag = "Episode",
+)]
+#[put("/episodes/{episode_uuid}")]
+pub async fn update_episode(
+    pool: web::Data<DbPool>,
+    http_request: HttpRequest,
+    path: web::Path<String>,
+    payload: Multipart,
+) -> impl Responder {
+    if check_role(http_request) == Admin {
+        let episode_uuid = path.into_inner();
+        match parse_payload_data(payload).await {
+            Ok((payload_data, tmp_path)) => {
+                let req_data = UpdateEpisodeRequest::from_payload_data(payload_data).await;
+                match Service::update_episode(&pool, episode_uuid, req_data).await {
+                    Ok(updated_episode) => {
+                        delete_directory_if_exists(&tmp_path);
+                        HttpResponse::Ok().json(updated_episode)
+                    }
+                    Err(e) => {
+                        println!("Failed to update episode: {}", e);
+                        delete_directory_if_exists(&tmp_path);
+                        HttpResponse::BadRequest().json(ResponseMessage {
+                            message: String::from("Failed to update episode"),
+                        })
+                    }
+                }
+            }
+            Err(e) => HttpResponse::BadRequest().json(ResponseMessage {
+                message: String::from(e),
+            }),
+        }
+    } else {
+        HttpResponse::Unauthorized().json(ResponseMessage {
+            message: String::from("Unauthorized"),
+        })
+    }
+}
 
 /// Delete Episode
 ///

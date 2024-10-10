@@ -1,24 +1,15 @@
-use std::collections::HashMap;
-use chrono::{NaiveDateTime};
+use crate::common::ne_parse::NEParse;
+use crate::common::utils::get_data_directory;
+use crate::schema::{albums, episodes};
+use chrono::NaiveDateTime;
 use diesel::prelude::*;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use std::collections::HashMap;
 use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
-use crate::common::ne_parse::NEParse;
-use crate::common::utils::{get_data_directory};
-use crate::schema::{episodes, albums};
 
-#[derive(
-    Debug,
-    Queryable,
-    Selectable,
-    ToSchema,
-    Clone,
-    IntoParams,
-    PartialEq,
-    Eq
-)]
+#[derive(Debug, Queryable, Selectable, ToSchema, Clone, IntoParams, PartialEq, Eq)]
 #[diesel(table_name = albums)]
 pub struct EpisodeAlbum {
     pub id: i32,
@@ -54,7 +45,7 @@ pub struct EpisodeAlbum {
     Clone,
     IntoParams,
     PartialEq,
-    Eq
+    Eq,
 )]
 #[diesel(table_name = episodes)]
 pub struct Episode {
@@ -68,7 +59,6 @@ pub struct Episode {
     pub updated_at: Option<NaiveDateTime>,
 }
 
-
 impl Episode {
     pub fn from_create_request(req: CreateEpisodeRequest, album_uuid: String) -> Self {
         let episode_uuid = Uuid::new_v4().to_string();
@@ -78,7 +68,18 @@ impl Episode {
             album_id: req.album_id,
             title: req.title,
             uuid: episode_uuid.clone(),
-            url: if req.file.clone().is_none() { None } else { Some(format!("{}/{}/{}/{}.{}", get_data_directory(), album_uuid, episode_uuid, episode_file_uuid, req.file.unwrap().split(".").last().unwrap())) },
+            url: if req.file.clone().is_none() {
+                None
+            } else {
+                Some(format!(
+                    "{}/{}/{}/{}.{}",
+                    get_data_directory(),
+                    album_uuid,
+                    episode_uuid,
+                    episode_file_uuid,
+                    req.file.unwrap().split(".").last().unwrap()
+                ))
+            },
             broken_at: None,
             created_at: None,
             updated_at: None,
@@ -86,17 +87,7 @@ impl Episode {
     }
 }
 
-
-#[derive(
-    Debug,
-    Serialize,
-    Deserialize,
-    Clone,
-    ToSchema,
-    IntoParams,
-    PartialEq,
-    Eq
-)]
+#[derive(Debug, Serialize, Deserialize, Clone, ToSchema, IntoParams, PartialEq, Eq)]
 pub struct EpisodeResponse {
     pub id: Option<i32>,
     pub album_id: i32,
@@ -127,7 +118,6 @@ impl EpisodeResponse {
     }
 }
 
-
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct CreateEpisodeRequest {
     //Album ID
@@ -143,22 +133,26 @@ pub struct CreateEpisodeRequest {
 impl CreateEpisodeRequest {
     pub async fn check_required_data(payload_data: HashMap<String, Value>) -> bool {
         (payload_data.contains_key("title") && payload_data.contains_key("album_id"))
-            &&
-            (
-                !payload_data["title"].as_str().is_none()
-                    && !NEParse::opt_immut_str_to_opt_i32(payload_data["album_id"].as_str()).is_none()
-            )
+            && (!payload_data["title"].as_str().is_none()
+                && !NEParse::opt_immut_str_to_opt_i32(payload_data["album_id"].as_str()).is_none())
     }
     pub async fn from_payload_data(payload_data: HashMap<String, Value>) -> Self {
-        let file_paths: Vec<String> = if payload_data.contains_key("file") { NEParse::opt_immut_vec_serde_json_value_to_vec_string(payload_data["file"].as_array()) } else { vec![] };
+        let file_paths: Vec<String> = if payload_data.contains_key("file") {
+            NEParse::opt_immut_vec_serde_json_value_to_vec_string(payload_data["file"].as_array())
+        } else {
+            vec![]
+        };
         CreateEpisodeRequest {
             album_id: NEParse::opt_immut_str_to_opt_i32(payload_data["album_id"].as_str()).unwrap(),
             title: payload_data["title"].as_str().unwrap().to_string(),
-            file: if file_paths.is_empty() { None } else { file_paths.first().cloned() },
+            file: if file_paths.is_empty() {
+                None
+            } else {
+                file_paths.first().cloned()
+            },
         }
     }
 }
-
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct UpdateEpisodeRequest {
@@ -171,10 +165,18 @@ pub struct UpdateEpisodeRequest {
 
 impl UpdateEpisodeRequest {
     pub async fn from_payload_data(payload_data: HashMap<String, Value>) -> Self {
-        let file_paths: Vec<String> = if payload_data.contains_key("file") { NEParse::opt_immut_vec_serde_json_value_to_vec_string(payload_data["file"].as_array()) } else { vec![] };
+        let file_paths: Vec<String> = if payload_data.contains_key("file") {
+            NEParse::opt_immut_vec_serde_json_value_to_vec_string(payload_data["file"].as_array())
+        } else {
+            vec![]
+        };
         UpdateEpisodeRequest {
             title: NEParse::opt_immut_str_to_option_string(payload_data["title"].as_str()),
-            file: if file_paths.is_empty() { None } else { file_paths.first().cloned() },
+            file: if file_paths.is_empty() {
+                None
+            } else {
+                file_paths.first().cloned()
+            },
         }
     }
 }

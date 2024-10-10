@@ -4,10 +4,11 @@ use actix_web::{delete, get, post, put, web, HttpRequest, HttpResponse, Responde
 use crate::common::database::DbPool;
 use crate::common::enums::Role::Admin;
 use crate::common::models::response_message::ResponseMessage;
-use crate::common::utils::{
-    delete_directory_if_exists, parse_payload_data,
+use crate::common::utils::{delete_directory_if_exists, parse_payload_data};
+use crate::features::album::models::{
+    AddAlbumImagesRequest, AlbumResponse, CreateAlbumRequest, GetAlbumRequest,
+    RemoveAlbumImagesRequest, UpdateAlbumRequest,
 };
-use crate::features::album::models::{AddAlbumImagesRequest, AlbumResponse, CreateAlbumRequest, GetAlbumRequest, RemoveAlbumImagesRequest, UpdateAlbumRequest};
 use crate::features::album::services::Service;
 use crate::features::check_role;
 
@@ -193,11 +194,9 @@ pub async fn update_album(
                     }
                 }
             }
-            Err(e) => {
-                HttpResponse::BadRequest().json(ResponseMessage {
-                    message: String::from(e),
-                })
-            }
+            Err(e) => HttpResponse::BadRequest().json(ResponseMessage {
+                message: String::from(e),
+            }),
         }
     } else {
         HttpResponse::Unauthorized().json(ResponseMessage {

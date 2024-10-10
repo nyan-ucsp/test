@@ -9,8 +9,9 @@ use crate::common::models::response_data::*;
 use crate::common::models::response_message::*;
 
 pub mod album;
+pub mod content;
+pub mod episode;
 pub mod health_check;
-pub(crate) mod episode;
 
 pub fn config_routes(cfg: &mut web::ServiceConfig) {
     album::configure(cfg);
@@ -32,6 +33,7 @@ struct SecurityAddon;
         album::controllers::add_album_images,
         album::controllers::remove_album_images,
         episode::controllers::create_episode,
+        episode::controllers::update_episode,
         episode::controllers::delete_episode,
         episode::controllers::get_episodes_by_album_id,
         health_check::controllers::get_health,
@@ -49,6 +51,7 @@ struct SecurityAddon;
             episode::models::Episode,
             episode::models::EpisodeResponse,
             episode::models::CreateEpisodeRequest,
+            episode::models::UpdateEpisodeRequest,
             episode::models::FilterEpisodeRequest,
             ResponseMessage
         )
@@ -78,5 +81,11 @@ fn check_role(http_request: HttpRequest) -> Role {
         .get::<String>()
         .cloned()
         .unwrap_or_else(|| "unknown".to_string());
-    if "admin" == role { Admin } else if "user" == role { User } else { Unknown }
+    if "admin" == role {
+        Admin
+    } else if "user" == role {
+        User
+    } else {
+        Unknown
+    }
 }

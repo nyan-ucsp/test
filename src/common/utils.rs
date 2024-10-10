@@ -1,12 +1,12 @@
-use std::collections::HashMap;
-use std::io::Write;
-use std::path::Path;
-use std::{env, fs};
 use actix_multipart::Multipart;
 use futures_util::StreamExt;
 use image::GenericImageView;
 use mime_guess::from_path;
 use serde_json::Value;
+use std::collections::HashMap;
+use std::io::Write;
+use std::path::Path;
+use std::{env, fs};
 use uuid::Uuid;
 
 use crate::common::enums::FileDataMap;
@@ -37,14 +37,23 @@ pub fn move_file_and_replace(src: &str, dest: &str) {
     if dest_path.exists() {
         // Remove the existing destination file
         if let Err(e) = fs::remove_file(dest_path) {
-            eprintln!("Error removing existing file {}: {}", dest_path.display(), e);
+            eprintln!(
+                "Error removing existing file {}: {}",
+                dest_path.display(),
+                e
+            );
             return;
         }
     }
 
     // Try to copy the file
     if let Err(e) = fs::copy(src_path, dest_path) {
-        eprintln!("Error copying file from {} to {}: {}", src_path.display(), dest_path.display(), e);
+        eprintln!(
+            "Error copying file from {} to {}: {}",
+            src_path.display(),
+            dest_path.display(),
+            e
+        );
         return;
     }
 
@@ -77,10 +86,12 @@ pub fn get_data_directory() -> String {
     "data".to_string()
 }
 pub fn get_project_directory() -> String {
-    format!("{}", env::current_dir().expect("REASON").display(), )
+    format!("{}", env::current_dir().expect("REASON").display(),)
 }
 
-pub async fn parse_payload_data(mut payload: Multipart) -> Result<(HashMap<String, Value>, String), String> {
+pub async fn parse_payload_data(
+    mut payload: Multipart,
+) -> Result<(HashMap<String, Value>, String), String> {
     let tmp_uuid = Uuid::new_v4().to_string();
     let tmp_path = format!("{}/tmp/{}", get_project_directory(), tmp_uuid);
     // !dynamic mapping
@@ -119,7 +130,10 @@ pub async fn parse_payload_data(mut payload: Multipart) -> Result<(HashMap<Strin
     }
     // Convert File Data HashMap to JSON value and then insert to FormData struct
     for (key, paths) in file_data_map {
-        form_data_map.insert(key, Value::Array(paths.into_iter().map(Value::String).collect()));
+        form_data_map.insert(
+            key,
+            Value::Array(paths.into_iter().map(Value::String).collect()),
+        );
     }
     Ok((form_data_map, tmp_path))
 }
@@ -136,7 +150,8 @@ pub fn get_file_metadata(file_path: &str) -> FileMetadata {
         image_data = get_image_metadata(file_path);
     } else if content_type.starts_with("video/") {
         //TODO Add video with height and generate thumbnail here
-    } else {}
+    } else {
+    }
     FileMetadata {
         content_type,
         original_name,
@@ -172,8 +187,10 @@ fn is_multi_keywords(word: &str) -> bool {
     word.ends_with("s") || word.ends_with("es")
 }
 
-pub fn remove_values_from_vec_string<'a>(filter_vec: &Vec<String>, original_vec: &'a mut Vec<String>) -> &'a mut Vec<String> {
+pub fn remove_values_from_vec_string<'a>(
+    filter_vec: &Vec<String>,
+    original_vec: &'a mut Vec<String>,
+) -> &'a mut Vec<String> {
     original_vec.retain(|value| !filter_vec.contains(value));
     original_vec
 }
-

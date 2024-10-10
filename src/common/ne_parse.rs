@@ -3,17 +3,12 @@ use serde_json::Value;
 
 pub struct NEParse;
 
-
 impl NEParse {
     pub fn opt_immut_str_to_opt_i32(s: Option<&str>) -> Option<i32> {
         if s != None {
             match s?.to_string().parse::<i32>() {
-                Ok(d) => {
-                    Some(d)
-                }
-                Err(_) => {
-                    None
-                }
+                Ok(d) => Some(d),
+                Err(_) => None,
             }
         } else {
             None
@@ -28,10 +23,18 @@ impl NEParse {
         }
     }
 
-
-    pub fn opt_immut_vec_serde_json_value_to_opt_vec_string(value: Option<&Vec<Value>>) -> Option<Vec<String>> {
+    pub fn opt_immut_vec_serde_json_value_to_opt_vec_string(
+        value: Option<&Vec<Value>>,
+    ) -> Option<Vec<String>> {
         if value != None {
-            let v: Vec<String> = value.into_iter().map(|data| data.into_iter().map(|s| s.as_str().unwrap().to_string()).collect()).collect();
+            let v: Vec<String> = value
+                .into_iter()
+                .map(|data| {
+                    data.into_iter()
+                        .map(|s| s.as_str().unwrap().to_string())
+                        .collect()
+                })
+                .collect();
             Option::from(v)
         } else {
             None
@@ -60,13 +63,11 @@ impl NEParse {
         if value.is_none() {
             vec![]
         } else {
-            value.unwrap_or(&Vec::new()).into_iter().map(|s| s.as_str().unwrap_or("").to_string()).collect()
+            value
+                .unwrap_or(&Vec::new())
+                .into_iter()
+                .map(|s| s.as_str().unwrap_or("").to_string())
+                .collect()
         }
     }
 }
-
-
-
-
-
-
