@@ -1,11 +1,11 @@
-use std::collections::HashMap;
+use crate::common::ne_parse::NEParse;
+use crate::schema::contents;
 use chrono::NaiveDateTime;
 use diesel::{AsChangeset, Identifiable, Insertable, Queryable, Selectable};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use std::collections::HashMap;
 use utoipa::{IntoParams, ToSchema};
-use crate::common::ne_parse::NEParse;
-use crate::schema::contents;
 
 #[derive(
     Debug,
@@ -49,9 +49,31 @@ pub struct ContentResponse {
     pub width: i32,
     pub height: i32,
     pub bytes: i32,
-    pub broken_at: Option<NaiveDateTime>,
+    pub broken_at: Option<String>,
 }
 
+impl ContentResponse {
+    pub fn from_content(content: Content) -> Self {
+        ContentResponse {
+            id: content.id,
+            episode_id: content.episode_id,
+            uuid: content.uuid,
+            index_no: content.index_no,
+            url: content.url,
+            content_type: content.content_type,
+            width: content.width,
+            height: content.height,
+            bytes: content.bytes,
+            broken_at: NEParse::opt_naive_datetime_to_utc_opt_string(content.broken_at),
+        }
+    }
+    pub fn from_contents(contents: Vec<Content>) -> Vec<Self> {
+        contents
+            .into_iter()
+            .map(|e| Self::from_content(e))
+            .collect()
+    }
+}
 
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct AddEpisodeContentsRequest {
@@ -70,7 +92,8 @@ impl AddEpisodeContentsRequest {
         };
 
         AddEpisodeContentsRequest {
-            episode_id: NEParse::opt_immut_str_to_opt_i32(payload_data["episode_id"].as_str()).unwrap(),
+            episode_id: NEParse::opt_immut_str_to_opt_i32(payload_data["episode_id"].as_str())
+                .unwrap(),
             files: file_paths,
         }
     }
