@@ -30,6 +30,7 @@ diesel::table! {
         uuid -> Text,
         index_no -> Integer,
         url -> Text,
+        ads_url -> Nullable<Text>,
         content_type -> Text,
         width -> Integer,
         height -> Integer,

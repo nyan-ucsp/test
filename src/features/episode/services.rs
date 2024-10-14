@@ -30,10 +30,8 @@ impl Service {
                                 response.url.clone().unwrap()
                             );
                             move_file_and_replace(data.unwrap().as_str(), &*des_file_path);
-                            Ok(response)
-                        } else {
-                            Err("Some files lost on data exchanging")
                         }
+                        Ok(response)
                     }
                     Err(e) => {
                         eprintln!("Error: {e}");

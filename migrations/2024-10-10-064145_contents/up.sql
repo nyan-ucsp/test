@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS  contents
     uuid TEXT UNIQUE NOT NULL,
     index_no INTEGER NOT NULL,
     url TEXT NOT NULL,
+    ads_url TEXT,
     content_type TEXT NOT NULL,
     width INTEGER NOT NULL,
     height INTEGER NOT NULL,

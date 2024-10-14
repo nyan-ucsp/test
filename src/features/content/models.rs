@@ -29,6 +29,7 @@ pub struct Content {
     pub uuid: String,
     pub index_no: i32,
     pub url: String,
+    pub ads_url: Option<String>,
     pub content_type: String,
     pub width: i32,
     pub height: i32,
@@ -45,6 +46,7 @@ pub struct ContentResponse {
     pub uuid: String,
     pub index_no: i32,
     pub url: String,
+    pub ads_url: Option<String>,
     pub content_type: String,
     pub width: i32,
     pub height: i32,
@@ -60,6 +62,7 @@ impl ContentResponse {
             uuid: content.uuid,
             index_no: content.index_no,
             url: content.url,
+            ads_url: content.ads_url,
             content_type: content.content_type,
             width: content.width,
             height: content.height,
@@ -84,17 +87,22 @@ pub struct AddEpisodeContentsRequest {
 }
 
 impl AddEpisodeContentsRequest {
-    pub async fn from_payload_data(payload_data: HashMap<String, Value>) -> Self {
-        let file_paths = if payload_data.contains_key("images") {
-            NEParse::opt_immut_vec_serde_json_value_to_vec_string(payload_data["images"].as_array())
+    pub async fn from_payload_data<'a>(
+        payload_data: HashMap<String, Value>,
+    ) -> Result<Self, &'a str> {
+        let file_paths = if payload_data.contains_key("files") {
+            NEParse::opt_immut_vec_serde_json_value_to_vec_string(payload_data["files"].as_array())
         } else {
             vec![]
         };
-
-        AddEpisodeContentsRequest {
-            episode_id: NEParse::opt_immut_str_to_opt_i32(payload_data["episode_id"].as_str())
-                .unwrap(),
-            files: file_paths,
+        if file_paths.is_empty() {
+            Err("Files cannot be empty")
+        } else {
+            Ok(AddEpisodeContentsRequest {
+                episode_id: NEParse::opt_immut_str_to_opt_i32(payload_data["episode_id"].as_str())
+                    .expect("Invalid episode id"),
+                files: file_paths,
+            })
         }
     }
 }

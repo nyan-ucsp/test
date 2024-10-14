@@ -16,6 +16,7 @@ pub mod health_check;
 pub fn config_routes(cfg: &mut web::ServiceConfig) {
     album::configure(cfg);
     episode::configure(cfg);
+    content::configure(cfg);
     health_check::configure(cfg);
 }
 
@@ -36,6 +37,9 @@ struct SecurityAddon;
         episode::controllers::update_episode,
         episode::controllers::delete_episode,
         episode::controllers::get_episodes_by_album_id,
+        content::controllers::add_contents,
+        content::controllers::get_contents,
+        content::controllers::delete_content,
         health_check::controllers::get_health,
     ),
     components(
@@ -53,6 +57,9 @@ struct SecurityAddon;
             episode::models::CreateEpisodeRequest,
             episode::models::UpdateEpisodeRequest,
             episode::models::FilterEpisodeRequest,
+            content::models::AddEpisodeContentsRequest,
+            content::models::ContentResponse,
+            ResponseDataContent,
             ResponseMessage
         )
     ),
@@ -60,6 +67,7 @@ struct SecurityAddon;
     tags(
         (name = "Album", description = "Album"),
         (name = "Episode", description = "Episode"),
+        (name = "Content", description = "Content"),
         (name = "HealthCheck", description = "Service Health Checking"),
     ),
 )]
