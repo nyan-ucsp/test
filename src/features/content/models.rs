@@ -106,3 +106,27 @@ impl AddEpisodeContentsRequest {
         }
     }
 }
+
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
+pub struct UpdateContentRequest {
+    /// Episode Content Files
+    #[schema(value_type = Option < String >, format = Binary)]
+    pub file: Option<String>,
+    pub ads_url: Option<String>,
+}
+
+impl UpdateContentRequest {
+    pub async fn from_payload_data<'a>(
+        payload_data: HashMap<String, Value>,
+    ) -> Result<Self, &'a str> {
+        let file_path = if payload_data.contains_key("file") {
+            NEParse::opt_immut_str_to_option_string(payload_data["file"].as_str())
+        } else {
+            None
+        };
+        Ok(UpdateContentRequest {
+            file: file_path,
+            ads_url: NEParse::opt_immut_str_to_option_string(payload_data["ads_url"].as_str()),
+        })
+    }
+}

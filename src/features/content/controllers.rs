@@ -40,7 +40,7 @@ pub async fn add_contents(
         match parse_payload_data(payload).await {
             Ok((payload_data, tmp_path)) => {
                 match models::AddEpisodeContentsRequest::from_payload_data(payload_data).await {
-                    Ok(req_data) => match Service::create_episode_contents(&pool, req_data).await {
+                    Ok(req_data) => match Service::add_episode_contents(&pool, req_data).await {
                         Ok(response) => {
                             delete_directory_if_exists(&tmp_path);
                             HttpResponse::Created().json(response)

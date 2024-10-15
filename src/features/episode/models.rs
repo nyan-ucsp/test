@@ -54,6 +54,10 @@ pub struct Episode {
     pub uuid: String,
     pub title: String,
     pub url: Option<String>,
+    pub content_type: Option<String>,
+    pub width: i32,
+    pub height: i32,
+    pub bytes: i32,
     pub broken_at: Option<NaiveDateTime>,
     pub created_at: Option<NaiveDateTime>,
     pub updated_at: Option<NaiveDateTime>,
@@ -68,6 +72,7 @@ impl Episode {
             album_id: req.album_id,
             title: req.title,
             uuid: episode_uuid.clone(),
+
             url: if req.file.clone().is_none() {
                 None
             } else {
@@ -80,6 +85,10 @@ impl Episode {
                     req.file.unwrap().split(".").last().unwrap()
                 ))
             },
+            content_type: None,
+            width: 0,
+            height: 0,
+            bytes: 0,
             broken_at: None,
             created_at: None,
             updated_at: None,
@@ -94,6 +103,10 @@ pub struct EpisodeResponse {
     pub title: String,
     pub uuid: String,
     pub url: Option<String>,
+    pub content_type: Option<String>,
+    pub width: i32,
+    pub height: i32,
+    pub bytes: i32,
     pub broken_at: Option<String>,
     pub created_at: Option<String>,
     pub updated_at: Option<String>,
@@ -107,6 +120,10 @@ impl EpisodeResponse {
             title: ep.title,
             uuid: ep.uuid,
             url: ep.url,
+            content_type: ep.content_type,
+            width: ep.width,
+            height: ep.height,
+            bytes: ep.bytes,
             broken_at: NEParse::opt_naive_datetime_to_utc_opt_string(ep.broken_at),
             created_at: NEParse::opt_naive_datetime_to_utc_opt_string(ep.created_at),
             updated_at: NEParse::opt_naive_datetime_to_utc_opt_string(ep.updated_at),

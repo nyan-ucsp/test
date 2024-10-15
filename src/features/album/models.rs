@@ -161,9 +161,7 @@ impl CreateAlbumRequest {
                 Some(true)
             },
             min_age: if payload_data.contains_key("min_age") {
-                payload_data["min_age"]
-                    .as_i64()
-                    .map(|value| value.try_into().unwrap())
+                NEParse::opt_immut_str_to_opt_i32(payload_data["min_age"].as_str())
             } else {
                 Some(0)
             },
@@ -233,7 +231,7 @@ impl UpdateAlbumRequest {
                 payload_data["released_at"].as_str(),
             ),
             broken_at: NEParse::opt_immut_str_to_opt_naive_datetime(
-                payload_data["released_at"].as_str(),
+                payload_data["broken_at"].as_str(),
             ),
         }
     }

@@ -1,8 +1,9 @@
 use crate::common::database::DbPool;
+use crate::common::models::file_metadata::ImageMetadata;
 use crate::common::models::response_data::ResponseData;
 use crate::common::utils::{
-    delete_directory_if_exists, delete_file_if_exists, get_data_directory, get_project_directory,
-    move_file_and_replace,
+    delete_directory_if_exists, delete_file_if_exists, get_data_directory, get_file_metadata,
+    get_project_directory, move_file_and_replace,
 };
 use crate::features::episode::models;
 use crate::features::episode::repository::*;
@@ -19,7 +20,22 @@ impl Service {
         match Repository::get_album_by_id(pool, req_data.clone().album_id).await {
             Ok(album) => {
                 let album_uuid = album.uuid;
-                let new_episode = models::Episode::from_create_request(req_data, album_uuid);
+                let mut new_episode = models::Episode::from_create_request(req_data, album_uuid);
+                if !data.is_none() {
+                    let metadata = get_file_metadata(data.clone().unwrap().as_str());
+                    new_episode.content_type = Some(metadata.content_type.clone());
+                    new_episode.width = metadata
+                        .image_data
+                        .clone()
+                        .unwrap_or(ImageMetadata::default())
+                        .width as i32;
+                    new_episode.height = metadata
+                        .image_data
+                        .clone()
+                        .unwrap_or(ImageMetadata::default())
+                        .height as i32;
+                    new_episode.bytes = metadata.size as i32;
+                }
                 match Repository::create_episode(pool, new_episode).await {
                     Ok(episode) => {
                         let response = models::EpisodeResponse::from_episode(episode);
@@ -91,6 +107,10 @@ impl Service {
                             uuid: episode.uuid,
                             title: update_episode.title.unwrap_or(episode.title),
                             url: episode.url,
+                            content_type: episode.content_type,
+                            width: episode.width,
+                            height: episode.height,
+                            bytes: episode.bytes,
                             broken_at: episode.broken_at,
                             created_at: episode.created_at,
                             updated_at: episode.updated_at,
@@ -98,6 +118,19 @@ impl Service {
                         if let Some(src_path) = update_episode.file.clone() {
                             let new_uuid = Uuid::new_v4().to_string();
                             let format = src_path.split(".").last().unwrap();
+                            let metadata = get_file_metadata(src_path.as_str());
+                            new_episode.content_type = Some(metadata.content_type);
+                            new_episode.width = metadata
+                                .image_data
+                                .clone()
+                                .unwrap_or(ImageMetadata::default())
+                                .width as i32;
+                            new_episode.height = metadata
+                                .image_data
+                                .clone()
+                                .unwrap_or(ImageMetadata::default())
+                                .height as i32;
+                            new_episode.bytes = metadata.size as i32;
                             let new_url = format!(
                                 "{}/{}/{}/{}.{}",
                                 get_data_directory(),

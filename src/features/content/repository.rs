@@ -2,7 +2,7 @@ use crate::common::database::DbPool;
 use crate::features::content::models;
 use crate::schema::contents::episode_id;
 use crate::schema::{albums, contents, episodes};
-use diesel::dsl::count_star;
+use diesel::dsl::{count_star, max};
 use diesel::prelude::*;
 use diesel::{JoinOnDsl, OptionalExtension, QueryDsl, QueryResult, RunQueryDsl};
 
@@ -78,6 +78,17 @@ impl Repository {
             .filter(episodes::id.eq(episode_id_val))
             .first::<String>(&mut conn)
             .optional() // Returns `None` if no episode is found with the given ID
+    }
+
+    pub async fn get_next_index_by_episode_id(
+        pool: &DbPool,
+        episode_id_val: i32,
+    ) -> QueryResult<Option<i32>> {
+        let mut conn = pool.get().expect("Failed to get DB connection");
+        contents::table
+            .select(max(contents::index_no))
+            .filter(contents::episode_id.eq(episode_id_val))
+            .first::<Option<i32>>(&mut conn)
     }
 
     pub async fn get_episode_id_by_uuid(
