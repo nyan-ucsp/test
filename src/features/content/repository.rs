@@ -102,6 +102,18 @@ impl Repository {
             .first::<Option<i32>>(&mut conn) // Returns `None` if no episode is found with the given ID
     }
 
+    pub async fn update_content(
+        pool: &DbPool,
+        update_content: models::Content,
+    ) -> Result<usize, diesel::result::Error> {
+        use crate::schema::contents::uuid;
+        let mut conn = pool.get().expect("Failed to get DB connection");
+        let result = diesel::update(contents::table.filter(uuid.eq(update_content.uuid.clone())))
+            .set(&update_content)
+            .execute(&mut conn)?;
+        Ok(result)
+    }
+
     pub async fn delete_content(
         pool: &DbPool,
         content_uuid: String,

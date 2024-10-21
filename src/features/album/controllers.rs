@@ -294,9 +294,8 @@ pub async fn remove_album_images(
         match Service::remove_album_images(&pool, album_uuid, req_rmv_album_cover).await {
             Ok(response) => HttpResponse::Ok().json(response),
             Err(e) => {
-                println!("Failed to remove album covers: {}", e);
                 HttpResponse::BadRequest().json(ResponseMessage {
-                    message: String::from("Failed to remove album covers"),
+                    message: String::from(e),
                 })
             }
         }

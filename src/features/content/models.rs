@@ -113,20 +113,32 @@ pub struct UpdateContentRequest {
     #[schema(value_type = Option < String >, format = Binary)]
     pub file: Option<String>,
     pub ads_url: Option<String>,
+    pub index_no: Option<i32>,
 }
 
 impl UpdateContentRequest {
     pub async fn from_payload_data<'a>(
         payload_data: HashMap<String, Value>,
     ) -> Result<Self, &'a str> {
-        let file_path = if payload_data.contains_key("file") {
-            NEParse::opt_immut_str_to_option_string(payload_data["file"].as_str())
+        let file_paths: Vec<String> = if payload_data.contains_key("file") {
+            NEParse::opt_immut_vec_serde_json_value_to_vec_string(payload_data["file"].as_array())
+        } else {
+            vec![]
+        };
+        let ads_url = if payload_data.contains_key("ads_url") {
+            NEParse::opt_immut_str_to_option_string(payload_data["ads_url"].as_str())
+        } else {
+            None
+        };
+        let index_no = if payload_data.contains_key("ads_url") {
+            NEParse::opt_immut_str_to_opt_i32(payload_data["index_no"].as_str())
         } else {
             None
         };
         Ok(UpdateContentRequest {
-            file: file_path,
-            ads_url: NEParse::opt_immut_str_to_option_string(payload_data["ads_url"].as_str()),
+            file: if file_paths.is_empty() { None } else { file_paths.first().cloned() },
+            ads_url,
+            index_no,
         })
     }
 }

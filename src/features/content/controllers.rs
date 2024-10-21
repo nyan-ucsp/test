@@ -6,7 +6,7 @@ use crate::features::check_role;
 use crate::features::content::models;
 use crate::features::content::services::Service;
 use actix_multipart::Multipart;
-use actix_web::{delete, get, post, web, HttpRequest, HttpResponse, Responder};
+use actix_web::{delete, get, post, put, web, HttpRequest, HttpResponse, Responder};
 
 /// Add Contents
 ///
@@ -97,6 +97,68 @@ pub async fn get_contents(
             Ok(response) => HttpResponse::Ok().json(response),
             Err(_) => HttpResponse::BadRequest().json(ResponseMessage {
                 message: String::from("Failed to get contents data"),
+            }),
+        }
+    } else {
+        HttpResponse::Unauthorized().json(ResponseMessage {
+            message: String::from("Unauthorized"),
+        })
+    }
+}
+
+/// Update Content
+///
+/// Update content
+#[utoipa::path(
+    post,
+    path = "/contents/{content_uuid}",
+    request_body(
+        content = UpdateContentRequest,
+        description = "Update Content Request",
+        content_type = "multipart/form-data",
+    ),
+    responses(
+        (status = 200, description = "Add successfully", body = ContentResponse),
+        (status = 400, description = "Update failed", body = ResponseMessage),
+        (status = 401, description = "Unauthorized error", body = ResponseMessage),
+        (status = 500, description = "Internal server error", body = ResponseMessage)
+    ),
+    security(
+        ("api_key" = [])
+    ),
+    tag = "Content",
+)]
+#[put("/contents/{content_uuid}")]
+pub async fn update_content(
+    pool: web::Data<DbPool>,
+    http_request: HttpRequest,
+    path: web::Path<String>,
+    payload: Multipart,
+) -> impl Responder {
+    if check_role(http_request) == Admin {
+        let content_uuid = path.into_inner();
+        match parse_payload_data(payload).await {
+            Ok((payload_data, tmp_path)) => {
+                match models::UpdateContentRequest::from_payload_data(payload_data).await {
+                    Ok(req_data) => match Service::update_content(&pool, content_uuid, req_data).await {
+                        Ok(response) => {
+                            delete_directory_if_exists(&tmp_path);
+                            HttpResponse::Ok().json(response)
+                        }
+                        Err(e) => {
+                            delete_directory_if_exists(&tmp_path);
+                            HttpResponse::BadRequest().json(ResponseMessage {
+                                message: String::from("Failed to update content"),
+                            })
+                        }
+                    },
+                    Err(e) => HttpResponse::BadRequest().json(ResponseMessage {
+                        message: String::from(e),
+                    }),
+                }
+            }
+            Err(e) => HttpResponse::BadRequest().json(ResponseMessage {
+                message: String::from("Failed to parse request data"),
             }),
         }
     } else {

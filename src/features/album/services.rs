@@ -215,7 +215,7 @@ impl Service {
         let album_images: &mut Vec<String> = &mut old_album_images.clone();
         remove_values_from_vec_string(&req.images.clone(), album_images);
         album_images.retain(|s| !s.trim().is_empty());
-        let new_images = album_images.join(",");
+        let new_images = album_images.clone().join(",");
         let mut new_album = models::Album {
             id: album.id,
             uuid: album.uuid.clone(),
@@ -242,12 +242,16 @@ impl Service {
                 for i in req.images {
                     delete_file_if_exists(i.as_str());
                 }
-                Ok(models::AlbumResponse::from_album(new_album.clone()))
+                if old_album_images.len().eq(&album_images.len()) {
+                    Err("No image was removed")
+                } else {
+                    Ok(models::AlbumResponse::from_album(new_album.clone()))
+                }
             }
             Ok(_) => Err("Album not found"),
             Err(e) => {
                 eprintln!("Error: {e}");
-                Err("Failed to remove album covers")
+                Err("Failed to remove album images")
             }
         }
     }
@@ -256,7 +260,7 @@ impl Service {
         pool: &DbPool,
         album_uuid: String,
     ) -> Result<usize, diesel::result::Error> {
-        let filepath = format!("{}/{}", get_data_directory(), album_uuid,);
+        let filepath = format!("{}/{}", get_data_directory(), album_uuid, );
         delete_directory_if_exists(&filepath);
         Repository::delete_album(pool, album_uuid).await
     }

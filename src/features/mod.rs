@@ -39,6 +39,7 @@ struct SecurityAddon;
         episode::controllers::get_episodes_by_album_id,
         content::controllers::add_contents,
         content::controllers::get_contents,
+        content::controllers::update_content,
         content::controllers::delete_content,
         health_check::controllers::get_health,
     ),
@@ -58,6 +59,7 @@ struct SecurityAddon;
             episode::models::UpdateEpisodeRequest,
             episode::models::FilterEpisodeRequest,
             content::models::AddEpisodeContentsRequest,
+            content::models::UpdateContentRequest,
             content::models::ContentResponse,
             ResponseDataContent,
             ResponseMessage

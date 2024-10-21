@@ -246,7 +246,7 @@ pub struct AddAlbumImagesRequest {
 
 #[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct RemoveAlbumImagesRequest {
-    /// Album Covers
+    /// Album Images
     pub images: Vec<String>,
 }
 

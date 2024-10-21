@@ -8,6 +8,7 @@ use crate::common::utils::{
 use crate::features::content::models;
 use crate::features::content::models::ContentResponse;
 use crate::features::content::repository::Repository;
+use chrono::Utc;
 use uuid::Uuid;
 
 pub struct Service;
@@ -82,7 +83,7 @@ impl Service {
                                             pool,
                                             new_contents.clone(),
                                         )
-                                        .await
+                                            .await
                                         {
                                             Ok(_) => {
                                                 if file_paths.len() == new_contents.len() {
@@ -94,14 +95,14 @@ impl Service {
                                                                 get_project_directory(),
                                                                 new_contents[i].url.clone(),
                                                             )
-                                                            .as_str(),
+                                                                .as_str(),
                                                         )
                                                     }
                                                     match Repository::get_contents_by_episode_id(
                                                         pool,
                                                         req.episode_id,
                                                     )
-                                                    .await
+                                                        .await
                                                     {
                                                         Ok(cs) => Ok(
                                                             models::ContentResponse::from_contents(
@@ -130,7 +131,7 @@ impl Service {
                     Err(_) => Err("Failed to get album uuid"),
                 }
             }
-            Err(e) => Err("Episode not found"),
+            Err(_) => Err("Episode not found"),
         }
     }
 
@@ -150,6 +151,70 @@ impl Service {
                         }),
                         Err(e) => Err(e),
                     }
+                }
+            }
+            Err(e) => Err(e),
+        }
+    }
+
+    pub async fn update_content(
+        pool: &DbPool,
+        content_uuid: String,
+        update_content_request: models::UpdateContentRequest,
+    ) -> Result<ContentResponse, diesel::result::Error> {
+        match Repository::get_content_by_uuid(pool, content_uuid.clone()).await {
+            Ok(content) => {
+                if !content.is_none() {
+                    let old_content = content.unwrap().clone();
+                    let mut update_content = old_content.clone();
+                    if !update_content_request.file.is_none() {
+                        match Repository::get_episode_uuid_by_id(pool, old_content.episode_id.clone()).await {
+                            Ok(episode_uuid) => {
+                                match Repository::get_album_uuid_by_episode_id(pool, old_content.episode_id).await {
+                                    Ok(album_uuid) => {
+                                        let new_uuid = Uuid::new_v4().to_string();
+                                        let new_url = format!(
+                                            "{}/{}/{}/{}.{}",
+                                            get_data_directory(),
+                                            album_uuid.clone().unwrap(),
+                                            episode_uuid.clone().unwrap(),
+                                            new_uuid,
+                                            update_content_request.file.clone().unwrap().split(".").last().unwrap()
+                                        );
+                                        let des_path = format!("{}/{}", get_project_directory(), new_url.clone());
+                                        move_file_and_replace(update_content_request.file.clone().unwrap().as_str(), des_path.as_str());
+                                        delete_file_if_exists(&old_content.url);
+                                        let metadata = get_file_metadata(update_content_request.file.unwrap().as_str());
+                                        update_content.content_type = metadata.content_type;
+                                        update_content.height = metadata.image_data.clone().unwrap_or(ImageMetadata::default()).height as i32;
+                                        update_content.width = metadata.image_data.unwrap_or(ImageMetadata::default()).width as i32;
+                                        update_content.bytes = metadata.size as i32;
+                                        update_content.url = new_url;
+                                        update_content.uuid = new_uuid;
+                                    }
+                                    Err(_) => {}
+                                }
+                            }
+                            Err(_) => {}
+                        }
+                    }
+                    if !update_content_request.ads_url.is_none() {
+                        update_content.ads_url = update_content_request.ads_url;
+                    }
+                    if !update_content_request.index_no.is_none() {
+                        update_content.index_no = update_content_request.index_no.unwrap();
+                    }
+                    update_content.updated_at = Some(Utc::now().naive_utc());
+                    match Repository::update_content(pool, update_content.clone()).await {
+                        Ok(usize) => if usize > 0 {
+                            Ok(ContentResponse::from_content(update_content))
+                        } else {
+                            Err(diesel::result::Error::NotFound)
+                        },
+                        Err(e) => Err(e),
+                    }
+                } else {
+                    Err(diesel::result::Error::NotFound)
                 }
             }
             Err(e) => Err(e),
