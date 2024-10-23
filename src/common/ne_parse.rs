@@ -23,6 +23,20 @@ impl NEParse {
         }
     }
 
+    pub fn opt_immut_str_to_option_bool(s: Option<&str>) -> Option<bool> {
+        if s != None {
+            if s?.eq("true") {
+                Some(true)
+            }else if s?.eq("false"){
+                Some(false)
+            }else{
+                None
+            }
+        } else {
+            None
+        }
+    }
+
     pub fn opt_immut_vec_serde_json_value_to_opt_vec_string(
         value: Option<&Vec<Value>>,
     ) -> Option<Vec<String>> {

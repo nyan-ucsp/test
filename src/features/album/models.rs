@@ -146,7 +146,7 @@ impl CreateAlbumRequest {
             cover: image_paths.first().unwrap().to_string(),
             images: Option::from(cover_paths),
             completed: if payload_data.contains_key("completed") {
-                payload_data["completed"].as_bool()
+                NEParse::opt_immut_str_to_option_bool(payload_data["completed"].as_str())
             } else {
                 Some(false)
             },
@@ -155,8 +155,8 @@ impl CreateAlbumRequest {
             } else {
                 Some(String::from(""))
             },
-            enable: if payload_data.contains_key("completed") {
-                payload_data["enable"].as_bool()
+            enable: if payload_data.contains_key("enable") {
+                NEParse::opt_immut_str_to_option_bool(payload_data["enable"].as_str())
             } else {
                 Some(true)
             },
@@ -221,9 +221,9 @@ impl UpdateAlbumRequest {
             } else {
                 Some(image_paths.first().unwrap().to_string())
             },
-            completed: payload_data["completed"].as_bool(),
+            completed:NEParse::opt_immut_str_to_option_bool(payload_data["completed"].as_str()),
             tags: payload_data["tags"].as_str().map(|value| value.to_string()),
-            enable: payload_data["enable"].as_bool(),
+            enable:NEParse::opt_immut_str_to_option_bool(payload_data["enable"].as_str()),
             min_age: payload_data["min_age"]
                 .as_i64()
                 .map(|value| value.try_into().unwrap()),
