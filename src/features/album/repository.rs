@@ -1,10 +1,10 @@
-use diesel::dsl::count_star;
-use diesel::prelude::*;
-
 use crate::common::database::DbPool;
 use crate::common::models::response_data::ResponseData;
 use crate::features::album::models;
 use crate::schema::albums;
+use crate::schema::albums::{broken_at, id};
+use diesel::dsl::count_star;
+use diesel::prelude::*;
 
 pub struct Repository;
 
@@ -125,10 +125,15 @@ impl Repository {
         use crate::schema::albums::uuid;
 
         let mut conn = pool.get().expect("Failed to get DB connection");
-
         let result = diesel::update(albums::table.filter(uuid.eq(update_album.uuid.clone())))
-            .set(&update_album)
+            .set(&update_album.clone())
             .execute(&mut conn)?;
+        if update_album.broken_at.is_none() {
+            let updated_broken_at: Option<String> = None;
+            let a = diesel::update(albums::table.filter(id.eq(update_album.clone().id)))
+                .set(broken_at.eq(updated_broken_at))
+                .execute(&mut conn)?;
+        }
         Ok(result)
     }
 

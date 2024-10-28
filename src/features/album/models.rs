@@ -221,12 +221,10 @@ impl UpdateAlbumRequest {
             } else {
                 Some(image_paths.first().unwrap().to_string())
             },
-            completed:NEParse::opt_immut_str_to_option_bool(payload_data["completed"].as_str()),
+            completed: NEParse::opt_immut_str_to_option_bool(payload_data["completed"].as_str()),
             tags: payload_data["tags"].as_str().map(|value| value.to_string()),
-            enable:NEParse::opt_immut_str_to_option_bool(payload_data["enable"].as_str()),
-            min_age: payload_data["min_age"]
-                .as_i64()
-                .map(|value| value.try_into().unwrap()),
+            enable: NEParse::opt_immut_str_to_option_bool(payload_data["enable"].as_str()),
+            min_age: NEParse::opt_immut_str_to_opt_i32(payload_data["min_age"].as_str()),
             released_at: NEParse::opt_immut_str_to_opt_naive_datetime(
                 payload_data["released_at"].as_str(),
             ),
