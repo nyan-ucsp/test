@@ -48,6 +48,7 @@ diesel::table! {
         uuid -> Text,
         title -> Text,
         url -> Nullable<Text>,
+        file_url -> Nullable<Text>,
         content_type -> Nullable<Text>,
         width -> Integer,
         height -> Integer,

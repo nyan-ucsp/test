@@ -84,7 +84,7 @@ impl Service {
     ) -> Result<usize, diesel::result::Error> {
         match Repository::get_album_uuid_by_episode_uuid(pool, episode_uuid.clone()).await {
             Ok(album_uuid) => {
-                let filepath = format!("{}/{}/{}", get_data_directory(), album_uuid, episode_uuid,);
+                let filepath = format!("{}/{}/{}", get_data_directory(), album_uuid, episode_uuid, );
                 delete_directory_if_exists(&filepath);
                 Repository::delete_episode(pool, episode_uuid).await
             }
@@ -107,6 +107,7 @@ impl Service {
                             uuid: episode.uuid,
                             title: update_episode.title.unwrap_or(episode.title),
                             url: episode.url,
+                            file_url: episode.file_url,
                             content_type: episode.content_type,
                             width: episode.width,
                             height: episode.height,

@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS  episodes
     uuid TEXT UNIQUE NOT NULL,
     title TEXT NOT NULL,
     url TEXT,
+    file_url TEXT,
     content_type TEXT,
     width INTEGER NOT NULL,
     height INTEGER NOT NULL,

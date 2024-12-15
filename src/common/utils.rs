@@ -86,7 +86,7 @@ pub fn get_data_directory() -> String {
     "data".to_string()
 }
 pub fn get_project_directory() -> String {
-    format!("{}", env::current_dir().expect("REASON").display(),)
+    format!("{}", env::current_dir().expect("REASON").display(), )
 }
 
 pub async fn parse_payload_data(
@@ -150,8 +150,7 @@ pub fn get_file_metadata(file_path: &str) -> FileMetadata {
         image_data = get_image_metadata(file_path);
     } else if content_type.starts_with("video/") {
         //TODO Add video with height and generate thumbnail here
-    } else {
-    }
+    } else {}
     FileMetadata {
         content_type,
         original_name,
@@ -181,10 +180,6 @@ fn get_image_metadata(file_path: &str) -> Option<ImageMetadata> {
     // Get the dimensions
     let (width, height) = img.dimensions();
     Option::from(ImageMetadata { width, height })
-}
-
-fn is_multi_keywords(word: &str) -> bool {
-    word.ends_with("s") || word.ends_with("es")
 }
 
 pub fn remove_values_from_vec_string<'a>(

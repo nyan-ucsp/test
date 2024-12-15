@@ -54,6 +54,7 @@ pub struct Episode {
     pub uuid: String,
     pub title: String,
     pub url: Option<String>,
+    pub file_url: Option<String>,
     pub content_type: Option<String>,
     pub width: i32,
     pub height: i32,
@@ -72,7 +73,6 @@ impl Episode {
             album_id: req.album_id,
             title: req.title,
             uuid: episode_uuid.clone(),
-
             url: if req.file.clone().is_none() {
                 None
             } else {
@@ -85,6 +85,7 @@ impl Episode {
                     req.file.unwrap().split(".").last().unwrap()
                 ))
             },
+            file_url: req.file_url,
             content_type: None,
             width: 0,
             height: 0,
@@ -103,6 +104,7 @@ pub struct EpisodeResponse {
     pub title: String,
     pub uuid: String,
     pub url: Option<String>,
+    pub file_url: Option<String>,
     pub content_type: Option<String>,
     pub width: i32,
     pub height: i32,
@@ -120,6 +122,7 @@ impl EpisodeResponse {
             title: ep.title,
             uuid: ep.uuid,
             url: ep.url,
+            file_url: ep.file_url,
             content_type: ep.content_type,
             width: ep.width,
             height: ep.height,
@@ -145,13 +148,16 @@ pub struct CreateEpisodeRequest {
     /// Episode File
     #[schema(value_type = Option<String>, format = Binary)]
     pub file: Option<String>,
+    /// Episode File as A URL
+    #[schema(value_type = Option<String>)]
+    pub file_url: Option<String>,
 }
 
 impl CreateEpisodeRequest {
     pub async fn check_required_data(payload_data: HashMap<String, Value>) -> bool {
         (payload_data.contains_key("title") && payload_data.contains_key("album_id"))
             && (!payload_data["title"].as_str().is_none()
-                && !NEParse::opt_immut_str_to_opt_i32(payload_data["album_id"].as_str()).is_none())
+            && !NEParse::opt_immut_str_to_opt_i32(payload_data["album_id"].as_str()).is_none())
     }
     pub async fn from_payload_data(payload_data: HashMap<String, Value>) -> Self {
         let file_paths: Vec<String> = if payload_data.contains_key("file") {
@@ -162,6 +168,7 @@ impl CreateEpisodeRequest {
         CreateEpisodeRequest {
             album_id: NEParse::opt_immut_str_to_opt_i32(payload_data["album_id"].as_str()).unwrap(),
             title: payload_data["title"].as_str().unwrap().to_string(),
+            file_url: if payload_data.contains_key("file_url") { NEParse::opt_immut_str_to_option_string(payload_data["file_url"].as_str()) } else { None },
             file: if file_paths.is_empty() {
                 None
             } else {
@@ -178,6 +185,9 @@ pub struct UpdateEpisodeRequest {
     /// Episode File
     #[schema(value_type = Option<String>, format = Binary)]
     pub file: Option<String>,
+    /// Episode File as A URL
+    #[schema(value_type = Option<String>)]
+    pub file_url: Option<String>,
 }
 
 impl UpdateEpisodeRequest {
@@ -194,6 +204,7 @@ impl UpdateEpisodeRequest {
             } else {
                 file_paths.first().cloned()
             },
+            file_url: if payload_data.contains_key("file_url") { NEParse::opt_immut_str_to_option_string(payload_data["file_url"].as_str()) } else { None },
         }
     }
 }

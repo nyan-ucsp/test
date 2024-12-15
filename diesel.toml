@@ -6,5 +6,5 @@ file = "src/schema.rs"
 custom_type_derives = ["diesel::query_builder::QueryId", "Clone"]
 
 [migrations_directory]
-dir = "D:\\workspace\\rust\\entmt\\migrations"
-#dir = "/Users/nyan/workspace/rust/nextera-entmt/migrations"
+#dir = "D:\\workspace\\rust\\entmt\\migrations"
+dir = "/Users/nyan/workspace/rust/nextera-entmt/migrations"
