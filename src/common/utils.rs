@@ -7,6 +7,11 @@ use std::collections::HashMap;
 use std::io::Write;
 use std::path::Path;
 use std::{env, fs};
+use actix_web::body::BoxBody;
+use actix_web::dev::ServiceResponse;
+use actix_web::http::header;
+use actix_web::HttpResponse;
+use actix_web::middleware::ErrorHandlerResponse;
 use uuid::Uuid;
 
 use crate::common::enums::FileDataMap;
@@ -189,3 +194,11 @@ pub fn remove_values_from_vec_string<'a>(
     original_vec.retain(|value| !filter_vec.contains(value));
     original_vec
 }
+
+// Custom 404 handler for static files
+pub async fn notfound_404() -> HttpResponse {
+    HttpResponse::NotFound()
+        .content_type("text/html")
+        .body("<h1>404 - File Not Found</h1><p>The requested static file does not exist.</p>")
+}
+

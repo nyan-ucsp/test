@@ -1,6 +1,4 @@
-use crate::features::episode::controllers::{
-    create_episode, delete_episode, get_episodes_by_album_id, update_episode,
-};
+use crate::features::episode::controllers::{create_episode, delete_episode, get_episode, get_episodes_by_album_id, update_episode};
 use actix_web::web;
 
 pub mod controllers;
@@ -13,4 +11,5 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
     cfg.service(update_episode);
     cfg.service(delete_episode);
     cfg.service(get_episodes_by_album_id);
+    cfg.service(get_episode);
 }

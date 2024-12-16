@@ -122,6 +122,56 @@ pub async fn get_episodes_by_album_id(
     }
 }
 
+/// Get Episode
+///
+/// Get episode by episode uuid
+#[utoipa::path(
+    get,
+    path = "/episode/{episode_uuid}",
+    params(
+        ("episode_uuid" = String, Path, description = "Episode UUID", style = Simple, example = "fd2fe858-9962-404f-9174-c4f6f83cc39e")
+    ),
+    responses(
+        (status = 200, description = "Get successfully", body = EpisodeResponse),
+        (status = 400, description = "Episode Not Found", body = ResponseMessage),
+        (status = 401, description = "Unauthorized error", body = ResponseMessage),
+        (status = 500, description = "Internal server error", body = ResponseMessage)
+    ),
+    security(
+        ("api_key" = [])
+    ),
+    tag = "Episode",
+)]
+#[delete("/episode/{episode_uuid}")]
+pub async fn get_episode(
+    pool: web::Data<DbPool>,
+    http_request: HttpRequest,
+    path: web::Path<String>,
+) -> impl Responder {
+    if check_role(http_request) == Admin {
+        let episode_uuid = path.into_inner();
+        match Service::get_episode_by_episode_uuid(&pool, episode_uuid).await {
+            Ok(episode)=>HttpResponse::Ok().json(episode),
+            Err(e) => {
+                if e == diesel::result::Error::NotFound {
+                    HttpResponse::BadRequest().json(ResponseMessage {
+                        message: String::from("Episode not found"),
+                    })
+                } else {
+                    println!("Failed to get episode: {}", e);
+                    HttpResponse::InternalServerError().json(ResponseMessage {
+                        message: String::from("Internal Server Error"),
+                    })
+                }
+            }
+        }
+    } else {
+        HttpResponse::Unauthorized().json(ResponseMessage {
+            message: String::from("Unauthorized"),
+        })
+    }
+}
+
 /// Update Episode
 ///
 /// Update episode

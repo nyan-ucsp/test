@@ -5,11 +5,12 @@ use std::env;
 use crate::common::middleware::response_time_middleware::ResponseTime;
 use actix_cors::Cors;
 use actix_files::Files;
-use actix_web::{middleware::Logger, web, App, HttpServer};
+use actix_web::{middleware, middleware::Logger, web, App, HttpServer};
 use actix_web_lab::middleware::CatchPanic;
 use dotenvy::dotenv;
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
+use crate::common::utils::{notfound_404};
 
 mod common;
 mod features;
@@ -57,7 +58,7 @@ async fn main() -> std::io::Result<()> {
             .service(
                 SwaggerUi::new("/swagger/{_:.*}").url("/api-docs/openapi.json", openapi.clone()),
             )
-            .service(Files::new("/static", "."))
+            .service(Files::new("/static", ".").default_handler(web::to(notfound_404)) )
     })
     .bind(("127.0.0.1", 8010))?
     .run()

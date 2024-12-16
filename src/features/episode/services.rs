@@ -62,6 +62,17 @@ impl Service {
         }
     }
 
+    pub async fn get_episode_by_episode_uuid(
+        pool: &DbPool,
+        episode_uuid: String,
+    ) -> Result<models::EpisodeResponse, diesel::result::Error> {
+        match Repository::get_episode_by_episode_uuid(pool, episode_uuid).await {
+            Ok(episode) => {
+                Ok(models::EpisodeResponse::from_episode(episode))
+            }
+            Err(e) => Err(e),
+        }
+    }
     pub async fn get_episodes_by_album_id(
         pool: &DbPool,
         album_id: i32,
