@@ -7,7 +7,7 @@ use crate::features::episode::models;
 use crate::features::episode::models::UpdateEpisodeRequest;
 use crate::features::episode::services::Service;
 use actix_multipart::Multipart;
-use actix_web::{delete, post, put, web, HttpRequest, HttpResponse, Responder};
+use actix_web::{delete, get, post, put, web, HttpRequest, HttpResponse, Responder};
 
 /// Create Episode
 ///
@@ -142,7 +142,7 @@ pub async fn get_episodes_by_album_id(
     ),
     tag = "Episode",
 )]
-#[delete("/episode/{episode_uuid}")]
+#[get("/episode/{episode_uuid}")]
 pub async fn get_episode(
     pool: web::Data<DbPool>,
     http_request: HttpRequest,

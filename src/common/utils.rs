@@ -77,6 +77,16 @@ pub fn delete_directory_if_exists(path: &str) {
     }
 }
 
+pub fn get_directory_from_file_path(file_path: &str)-> Option<&str> {
+    // Convert the file path into a Path
+    let path = Path::new(file_path);
+    // Get the parent directory
+    if let Some(data_dir) = path.parent() {
+        data_dir.to_str()
+    } else {
+        None
+    }
+}
 pub fn delete_file_if_exists(path: &str) {
     let path = Path::new(path);
     // Check if the directory exists
@@ -199,6 +209,6 @@ pub fn remove_values_from_vec_string<'a>(
 pub async fn notfound_404() -> HttpResponse {
     HttpResponse::NotFound()
         .content_type("text/html")
-        .body("<h1>404 - File Not Found</h1><p>The requested static file does not exist.</p>")
+        .body("<center><h1>404 - File Not Found</h1><p>The requested file does not exist.</p></center>")
 }
 

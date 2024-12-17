@@ -1,10 +1,7 @@
 use crate::common::database::DbPool;
 use crate::common::models::file_metadata::ImageMetadata;
 use crate::common::models::response_data::ResponseData;
-use crate::common::utils::{
-    delete_directory_if_exists, delete_file_if_exists, get_data_directory, get_file_metadata,
-    get_project_directory, move_file_and_replace,
-};
+use crate::common::utils::{delete_directory_if_exists, get_data_directory, get_directory_from_file_path, get_file_metadata, get_project_directory, move_file_and_replace};
 use crate::features::episode::models;
 use crate::features::episode::repository::*;
 use chrono::Utc;
@@ -107,9 +104,11 @@ impl Service {
         episode_uuid: String,
         update_episode: models::UpdateEpisodeRequest,
     ) -> Result<models::EpisodeResponse, &str> {
+        let file_url_exit = if(update_episode.file_url.is_some() && !update_episode.file_url.clone().unwrap().trim().is_empty()){true}else{false};
         match Repository::get_episode_by_episode_uuid(pool, episode_uuid.clone()).await {
             Ok(episode) => {
                 match Repository::get_album_uuid_by_episode_uuid(pool, episode_uuid.clone()).await {
+
                     Ok(album_uuid) => {
                         let old_url = episode.url.clone();
                         let mut new_episode = models::Episode {
@@ -117,12 +116,12 @@ impl Service {
                             album_id: episode.album_id,
                             uuid: episode.uuid,
                             title: update_episode.title.unwrap_or(episode.title),
-                            url: episode.url,
+                            url: if file_url_exit { Some(String::from("")) } else { episode.url },
                             file_url: episode.file_url,
-                            content_type: episode.content_type,
-                            width: episode.width,
-                            height: episode.height,
-                            bytes: episode.bytes,
+                            content_type: if file_url_exit { Some(String::from("")) } else {  episode.content_type },
+                            width: if file_url_exit { 0 } else {episode.width } ,
+                            height: if file_url_exit { 0 } else { episode.height } ,
+                            bytes: if file_url_exit { 0 } else { episode.bytes } ,
                             broken_at: episode.broken_at,
                             created_at: episode.created_at,
                             updated_at: episode.updated_at,
@@ -156,15 +155,18 @@ impl Service {
                         new_episode.updated_at = Some(Utc::now().naive_utc());
                         match Repository::update_episode(pool, new_episode.clone()).await {
                             Ok(size) if size > 0 => {
-                                if old_url != new_episode.url {
+                                if old_url != new_episode.url || file_url_exit {
                                     if !old_url.is_none() {
                                         let old_file_path = format!(
                                             "{}/{}",
                                             get_project_directory(),
                                             old_url.unwrap()
                                         );
-                                        //Delete old file
-                                        delete_file_if_exists(&old_file_path);
+                                        let old_directory_path = get_directory_from_file_path(&old_file_path);
+                                        if old_directory_path.is_some() {
+                                            //Delete old directory
+                                            delete_directory_if_exists(&old_directory_path.unwrap());
+                                        }
                                     }
                                     if let (Some(src_file_path), Some(new_ep_url)) =
                                         (update_episode.file, new_episode.url.clone())

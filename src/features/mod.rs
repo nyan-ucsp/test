@@ -35,6 +35,7 @@ struct SecurityAddon;
         album::controllers::remove_album_images,
         episode::controllers::create_episode,
         episode::controllers::update_episode,
+        episode::controllers::get_episode,
         episode::controllers::delete_episode,
         episode::controllers::get_episodes_by_album_id,
         content::controllers::add_contents,
