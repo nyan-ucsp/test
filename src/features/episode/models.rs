@@ -188,6 +188,8 @@ pub struct UpdateEpisodeRequest {
     /// Episode File as A URL
     #[schema(value_type = Option<String>)]
     pub file_url: Option<String>,
+    #[schema(value_type = bool)]
+    pub remove_old_file: bool
 }
 
 impl UpdateEpisodeRequest {
@@ -205,6 +207,7 @@ impl UpdateEpisodeRequest {
                 file_paths.first().cloned()
             },
             file_url: if payload_data.contains_key("file_url") { NEParse::opt_immut_str_to_option_string(payload_data["file_url"].as_str()) } else { None },
+            remove_old_file : if payload_data.contains_key("remove_old_file") {NEParse::opt_immut_str_to_option_bool(payload_data["remove_old_file"].as_str()).unwrap_or(false)}else { false },
         }
     }
 }
