@@ -13,11 +13,14 @@ pub mod content;
 pub mod episode;
 pub mod health_check;
 
+pub mod category;
+
 pub fn config_routes(cfg: &mut web::ServiceConfig) {
     album::configure(cfg);
     episode::configure(cfg);
     content::configure(cfg);
     health_check::configure(cfg);
+    category::configure(cfg);
 }
 
 struct SecurityAddon;
@@ -68,6 +71,7 @@ struct SecurityAddon;
     ),
     modifiers(& SecurityAddon),
     tags(
+        (name = "Category", description = "Category"),
         (name = "Album", description = "Album"),
         (name = "Episode", description = "Episode"),
         (name = "Content", description = "Content"),

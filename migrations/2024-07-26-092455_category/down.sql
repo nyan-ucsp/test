@@ -1,2 +1,2 @@
 -- This file should undo anything in `up.sql`
-drop table if exists contents;
+drop table if exists category;

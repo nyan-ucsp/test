@@ -4,6 +4,7 @@ diesel::table! {
     albums (id) {
         id -> Integer,
         uuid -> Text,
+        category_id -> Integer,
         title -> Text,
         description -> Text,
         completed -> Bool,
@@ -20,6 +21,13 @@ diesel::table! {
         broken_at -> Nullable<Timestamp>,
         created_at -> Nullable<Timestamp>,
         updated_at -> Nullable<Timestamp>,
+    }
+}
+
+diesel::table! {
+    category (id) {
+        id -> Nullable<Integer>,
+        name -> Text,
     }
 }
 
@@ -59,8 +67,11 @@ diesel::table! {
     }
 }
 
+diesel::joinable!(albums -> category (category_id));
+
 diesel::allow_tables_to_appear_in_same_query!(
     albums,
+    category,
     contents,
     episodes,
 );

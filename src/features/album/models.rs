@@ -29,6 +29,7 @@ use crate::schema::albums;
 pub struct Album {
     pub id: i32,
     pub uuid: String,
+    pub category_id: i32,
     pub title: String,
     pub description: String,
     pub completed: bool,
@@ -51,6 +52,7 @@ pub struct Album {
 pub struct AlbumResponse {
     pub id: i32,
     pub uuid: String,
+    pub category_id: i32,
     pub title: String,
     pub description: String,
     pub completed: bool,
@@ -74,6 +76,7 @@ impl AlbumResponse {
         AlbumResponse {
             id: album.id,
             uuid: album.uuid,
+            category_id: album.category_id,
             title: album.title,
             description: album.description,
             completed: album.completed,
@@ -121,8 +124,11 @@ pub struct CreateAlbumRequest {
     #[schema(example = true)]
     pub enable: Option<bool>,
     /// Minimum age of your album default is 0
-    #[schema(example = 0)]
+    #[schema(example = 1)]
     pub min_age: Option<i32>,
+    /// Album Category
+    #[schema(example = 1)]
+    pub category_id: i32,
     /// Start released date of your album
     pub released_at: Option<NaiveDateTime>,
 }
@@ -165,6 +171,7 @@ impl CreateAlbumRequest {
             } else {
                 Some(0)
             },
+            category_id: NEParse::opt_immut_str_to_opt_i32(payload_data["category_id"].as_str()).unwrap(),
             released_at: if payload_data.contains_key("released_at") {
                 NEParse::opt_immut_str_to_opt_naive_datetime(payload_data["released_at"].as_str())
             } else {
@@ -195,6 +202,9 @@ pub struct UpdateAlbumRequest {
     /// Minimum age of your album default is 0
     #[schema(example = 0)]
     pub min_age: Option<i32>,
+    /// Album Category
+    #[schema(example = 1)]
+    pub category_id: i32,
     /// Start released date of your album
     pub released_at: Option<NaiveDateTime>,
     /// Set empty if your album fix
@@ -225,6 +235,7 @@ impl UpdateAlbumRequest {
             tags: payload_data["tags"].as_str().map(|value| value.to_string()),
             enable: NEParse::opt_immut_str_to_option_bool(payload_data["enable"].as_str()),
             min_age: NEParse::opt_immut_str_to_opt_i32(payload_data["min_age"].as_str()),
+            category_id: NEParse::opt_immut_str_to_opt_i32(payload_data["min_age"].as_str()).unwrap(),
             released_at: NEParse::opt_immut_str_to_opt_naive_datetime(
                 payload_data["released_at"].as_str(),
             ),

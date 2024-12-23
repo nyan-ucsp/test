@@ -14,6 +14,7 @@ use uuid::Uuid;
 pub struct EpisodeAlbum {
     pub id: i32,
     pub uuid: String,
+    pub category_id: i32,
     pub title: String,
     pub description: String,
     pub completed: bool,
