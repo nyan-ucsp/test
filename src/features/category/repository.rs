@@ -1,9 +1,8 @@
 use crate::common::database::DbPool;
 use crate::features::category::models;
-use diesel::dsl::{count_star, max};
-use diesel::prelude::*;
-use diesel::{JoinOnDsl, OptionalExtension, QueryDsl, QueryResult, RunQueryDsl};
 use crate::schema::category;
+use diesel::prelude::*;
+use diesel::{QueryDsl, QueryResult, RunQueryDsl};
 use crate::schema::category::id;
 
 pub struct Repository;
@@ -11,7 +10,7 @@ pub struct Repository;
 impl Repository {
     pub async fn create_category(
         pool: &DbPool,
-        new_category: Vec<models::Category>,
+        new_category: models::Category,
     ) -> QueryResult<usize> {
         let mut conn = pool.get().expect("Failed to get DB connection");
         let rows_inserted = diesel::insert_into(category::table)
@@ -32,21 +31,21 @@ impl Repository {
     pub async fn update_category(
         pool: &DbPool,
         update_category: models::Category,
-    ) -> Result<usize, diesel::result::Error> {
+    ) -> Result<models::CategoryResponse, diesel::result::Error> {
         let mut conn = pool.get().expect("Failed to get DB connection");
         let result = diesel::update(category::table.filter(id.eq(update_category.id.clone())))
             .set(&update_category)
             .execute(&mut conn)?;
-        Ok(result)
+        Ok(models::CategoryResponse{ id: update_category.id, name: update_category.name })
     }
 
-    pub async fn delete_content(
+    pub async fn delete_category(
         pool: &DbPool,
-        content_uuid: String,
+        category_id: i32,
     ) -> Result<usize, diesel::result::Error> {
-        use crate::schema::contents::dsl::*;
+        use crate::schema::category::dsl::*;
         let mut conn = pool.get().expect("Failed to get DB connection");
-        let deleted = diesel::delete(contents.filter(uuid.eq(content_uuid))).execute(&mut conn)?;
+        let deleted = diesel::delete(category.filter(id.eq(category_id))).execute(&mut conn)?;
         Ok(deleted)
     }
 }

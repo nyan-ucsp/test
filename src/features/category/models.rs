@@ -1,4 +1,5 @@
 use crate::common::ne_parse::NEParse;
+use crate::schema::category;
 use diesel::{AsChangeset, Identifiable, Insertable, Queryable, Selectable};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -23,7 +24,7 @@ use utoipa::{IntoParams, ToSchema};
 #[diesel(table_name = category)]
 pub struct Category {
     pub id: Option<i32>,
-    pub name: String
+    pub name: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, ToSchema, Clone, IntoParams, PartialEq, Eq)]
@@ -42,7 +43,7 @@ impl CategoryResponse {
     pub fn from_categories(categories: Vec<Category>) -> Vec<Self> {
         categories
             .into_iter()
-            .map(|e| Self::from_content(e))
+            .map(|e| Self::from_category(e))
             .collect()
     }
 }

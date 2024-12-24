@@ -8,19 +8,18 @@ use crate::common::enums::Role::*;
 use crate::common::models::response_data::*;
 use crate::common::models::response_message::*;
 
+pub mod category;
 pub mod album;
 pub mod content;
 pub mod episode;
 pub mod health_check;
 
-pub mod category;
-
 pub fn config_routes(cfg: &mut web::ServiceConfig) {
+    category::configure(cfg);
     album::configure(cfg);
     episode::configure(cfg);
     content::configure(cfg);
     health_check::configure(cfg);
-    category::configure(cfg);
 }
 
 struct SecurityAddon;
@@ -29,6 +28,10 @@ struct SecurityAddon;
 #[openapi
 (
     paths(
+        category::controllers::add_category,
+        category::controllers::get_categories,
+        category::controllers::update_category,
+        category::controllers::delete_category,
         album::controllers::create_album,
         album::controllers::get_albums,
         album::controllers::get_album_by_uuid,
@@ -49,6 +52,11 @@ struct SecurityAddon;
     ),
     components(
         schemas(
+            category::models::Category,
+            category::models::AddCategoryRequest,
+            category::models::UpdateCategoryRequest,
+            category::models::CategoryResponse,
+            ResponseDataCategory,
             album::models::Album,
             album::models::AlbumResponse,
             album::models::CreateAlbumRequest,

@@ -1,26 +1,25 @@
 use crate::common::database::DbPool;
 use crate::common::enums::Role::Admin;
 use crate::common::models::response_message::ResponseMessage;
-use crate::common::utils::{delete_directory_if_exists, parse_payload_data};
 use crate::features::check_role;
-use crate::features::content::models;
-use crate::features::content::services::Service;
-use actix_multipart::Multipart;
+use crate::features::category::models;
+use crate::features::category::services::Service;
 use actix_web::{delete, get, post, put, web, HttpRequest, HttpResponse, Responder};
+use crate::common::ne_parse::NEParse;
+use crate::features::category::models::UpdateCategoryRequest;
 
-/// Add Contents
+/// Add Category
 ///
-/// Add contents to episode
+/// Add category
 #[utoipa::path(
     post,
-    path = "/content",
+    path = "/category",
     request_body(
-        content = AddEpisodeContentsRequest,
+        content = AddCategoryRequest,
         description = "Add Episode Contents Request",
-        content_type = "multipart/form-data",
     ),
     responses(
-        (status = 201, description = "Add successfully", body = ContentResponse),
+        (status = 201, description = "Add successfully", body = CategoryResponse),
         (status = 400, description = "Update failed", body = ResponseMessage),
         (status = 401, description = "Unauthorized error", body = ResponseMessage),
         (status = 500, description = "Internal server error", body = ResponseMessage)
@@ -28,38 +27,27 @@ use actix_web::{delete, get, post, put, web, HttpRequest, HttpResponse, Responde
     security(
         ("api_key" = [])
     ),
-    tag = "Content",
+    tag = "Category",
 )]
-#[post("/content")]
-pub async fn add_contents(
+#[post("/category")]
+pub async fn add_category(
     pool: web::Data<DbPool>,
     http_request: HttpRequest,
-    payload: Multipart,
+    req: web::Json<models::AddCategoryRequest>,
 ) -> impl Responder {
     if check_role(http_request) == Admin {
-        match parse_payload_data(payload).await {
-            Ok((payload_data, tmp_path)) => {
-                match models::AddEpisodeContentsRequest::from_payload_data(payload_data).await {
-                    Ok(req_data) => match Service::add_episode_contents(&pool, req_data).await {
-                        Ok(response) => {
-                            delete_directory_if_exists(&tmp_path);
-                            HttpResponse::Created().json(response)
-                        }
-                        Err(e) => {
-                            delete_directory_if_exists(&tmp_path);
-                            HttpResponse::BadRequest().json(ResponseMessage {
-                                message: String::from(e),
-                            })
-                        }
-                    },
-                    Err(e) => HttpResponse::BadRequest().json(ResponseMessage {
-                        message: String::from(e),
-                    }),
-                }
+        let request = req.into_inner();
+        match Service::add_category(&pool, request).await {
+            Ok(msg) => {
+                HttpResponse::Created().json(ResponseMessage {
+                    message: String::from(msg),
+                })
             }
-            Err(e) => HttpResponse::BadRequest().json(ResponseMessage {
-                message: String::from(e),
-            }),
+            Err(e) => {
+                HttpResponse::BadRequest().json(ResponseMessage {
+                    message: String::from(e),
+                })
+            }
         }
     } else {
         HttpResponse::Unauthorized().json(ResponseMessage {
@@ -68,14 +56,14 @@ pub async fn add_contents(
     }
 }
 
-/// Get Contents
+/// Get Categories
 ///
-/// Get contents by episode id
+/// Get categories
 #[utoipa::path(
     get,
-    path = "/contents/{episode_uuid}",
+    path = "/categories",
     responses(
-        (status = 200, description = "Add successfully", body = ContentResponse),
+        (status = 200, description = "Get successfully", body = ResponseDataCategory),
         (status = 400, description = "Update failed", body = ResponseMessage),
         (status = 401, description = "Unauthorized error", body = ResponseMessage),
         (status = 500, description = "Internal server error", body = ResponseMessage)
@@ -83,17 +71,15 @@ pub async fn add_contents(
     security(
         ("api_key" = [])
     ),
-    tag = "Content",
+    tag = "Category",
 )]
-#[get("/contents/{episode_uuid}")]
-pub async fn get_contents(
+#[get("/categories")]
+pub async fn get_categories(
     pool: web::Data<DbPool>,
     http_request: HttpRequest,
-    path: web::Path<String>,
 ) -> impl Responder {
-    let episode_uuid = path.into_inner();
     if check_role(http_request) == Admin {
-        match Service::get_contents_by_episode_uuid(&pool, episode_uuid).await {
+        match Service::get_categories(&pool).await {
             Ok(response) => HttpResponse::Ok().json(response),
             Err(_) => HttpResponse::BadRequest().json(ResponseMessage {
                 message: String::from("Failed to get contents data"),
@@ -106,19 +92,18 @@ pub async fn get_contents(
     }
 }
 
-/// Update Content
+/// Update Category
 ///
-/// Update content
+/// Update category
 #[utoipa::path(
-    post,
-    path = "/contents/{content_uuid}",
+    put,
+    path = "/category",
     request_body(
-        content = UpdateContentRequest,
+        content = UpdateCategoryRequest,
         description = "Update Content Request",
-        content_type = "multipart/form-data",
     ),
     responses(
-        (status = 200, description = "Add successfully", body = ContentResponse),
+        (status = 200, description = "Add successfully", body = CategoryResponse),
         (status = 400, description = "Update failed", body = ResponseMessage),
         (status = 401, description = "Unauthorized error", body = ResponseMessage),
         (status = 500, description = "Internal server error", body = ResponseMessage)
@@ -126,40 +111,25 @@ pub async fn get_contents(
     security(
         ("api_key" = [])
     ),
-    tag = "Content",
+    tag = "Category",
 )]
-#[put("/contents/{content_uuid}")]
-pub async fn update_content(
+#[put("/category")]
+pub async fn update_category(
     pool: web::Data<DbPool>,
     http_request: HttpRequest,
-    path: web::Path<String>,
-    payload: Multipart,
+    req: web::Json<UpdateCategoryRequest>,
 ) -> impl Responder {
     if check_role(http_request) == Admin {
-        let content_uuid = path.into_inner();
-        match parse_payload_data(payload).await {
-            Ok((payload_data, tmp_path)) => {
-                match models::UpdateContentRequest::from_payload_data(payload_data).await {
-                    Ok(req_data) => match Service::update_content(&pool, content_uuid, req_data).await {
-                        Ok(response) => {
-                            delete_directory_if_exists(&tmp_path);
-                            HttpResponse::Ok().json(response)
-                        }
-                        Err(e) => {
-                            delete_directory_if_exists(&tmp_path);
-                            HttpResponse::BadRequest().json(ResponseMessage {
-                                message: String::from("Failed to update content"),
-                            })
-                        }
-                    },
-                    Err(e) => HttpResponse::BadRequest().json(ResponseMessage {
-                        message: String::from(e),
-                    }),
-                }
+        let update_request = req.into_inner();
+        match Service::update_category(&pool, update_request).await {
+            Ok(response) => {
+                HttpResponse::Ok().json(response)
             }
-            Err(e) => HttpResponse::BadRequest().json(ResponseMessage {
-                message: String::from("Failed to parse request data"),
-            }),
+            Err(_) => {
+                HttpResponse::BadRequest().json(ResponseMessage {
+                    message: String::from("Failed to update category"),
+                })
+            }
         }
     } else {
         HttpResponse::Unauthorized().json(ResponseMessage {
@@ -169,14 +139,14 @@ pub async fn update_content(
 }
 
 
-/// Delete Content
+/// Delete Category
 ///
-/// Delete content
+/// Delete category
 #[utoipa::path(
     delete,
-    path = "/contents/{content_uuid}",
+    path = "/category/{category_id}",
     params(
-        ("content_uuid" = String, Path, description = "Content UUID", style = Simple, example = "fd2fe858-9962-404f-9174-c4f6f83cc39e")
+        ("category_id" = String, Path, description = "Category ID", style = Simple, example = "1")
     ),
     responses(
         (status = 204, description = "Delete successfully"),
@@ -187,21 +157,19 @@ pub async fn update_content(
     security(
         ("api_key" = [])
     ),
-    tag = "Content",
+    tag = "Category",
 )]
-#[delete("/contents/{content_uuid}")]
-pub async fn delete_content(
+#[delete("/category/{category_id}")]
+pub async fn delete_category(
     pool: web::Data<DbPool>,
     http_request: HttpRequest,
     path: web::Path<String>,
 ) -> impl Responder {
     if check_role(http_request) == Admin {
-        let content_uuid = path.into_inner();
-        match Service::delete_content(&pool, content_uuid).await {
-            Ok(size) if size > 0 => HttpResponse::NoContent().json(""),
-            Ok(_) => HttpResponse::BadRequest().json(ResponseMessage {
-                message: String::from("Content not found"),
-            }),
+        let string_id = path.into_inner();
+        let c_id : i32 = NEParse::opt_immut_str_to_opt_i32(Some(string_id.as_str())).unwrap_or(0i32);
+        match Service::delete_category(&pool, c_id).await {
+            Ok(_) => HttpResponse::NoContent().json(""),
             Err(e) => {
                 if e == diesel::result::Error::NotFound {
                     HttpResponse::BadRequest().json(ResponseMessage {
